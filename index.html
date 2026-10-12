@@ -31,6 +31,10 @@
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
+  <!-- Socket.io -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+
   <script type="module">
 
     import * as THREE from 'three';
@@ -371,6 +375,48 @@
     const adelante = new THREE.Vector3();
     const reloj = new THREE.Clock();
 
+    // ───── Multijugador ─────
+    const socket = io();
+    const otros = {};   // id -> { mesh, destino, rotDestino }
+
+    const geoOtro = new THREE.CapsuleGeometry(0.3, 0.6, 4, 8);
+
+    function crearOtro(j) {
+      if (otros[j.id]) return;
+      const color = new THREE.Color().setHSL((parseInt(j.id.slice(0, 4), 36) % 360) / 360, 0.7, 0.5);
+      const mesh = new THREE.Mesh(geoOtro, new THREE.MeshPhongMaterial({ color }));
+      const nariz = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.3), new THREE.MeshPhongMaterial({ color: 0xffffff }));
+      nariz.position.set(0, 0.35, -0.3);
+      mesh.add(nariz);
+      mesh.position.set(j.x, 0.6, j.z);
+      scene.add(mesh);
+      otros[j.id] = { mesh, destino: new THREE.Vector3(j.x, 0.6, j.z), rotDestino: j.rotY };
+    }
+
+    socket.on('init', ({ id, jugadores }) => {
+      for (const j of Object.values(jugadores)) if (j.id !== id) crearOtro(j);
+    });
+    socket.on('jugadorNuevo', crearOtro);
+    socket.on('estado', (d) => {
+      if (!otros[d.id]) crearOtro(d);
+      otros[d.id].destino.set(d.x, 0.6, d.z);
+      otros[d.id].rotDestino = d.rotY;
+    });
+    socket.on('jugadorSalio', (id) => {
+      if (!otros[id]) return;
+      scene.remove(otros[id].mesh);
+      delete otros[id];
+    });
+
+    // Enviar mi posición 20 veces por segundo, solo si cambió
+    let ultimo = { x: 0, z: 0, rotY: 0 };
+    setInterval(() => {
+      const x = camera.position.x, z = camera.position.z, rotY = camera.rotation.y;
+      if (Math.abs(x - ultimo.x) + Math.abs(z - ultimo.z) + Math.abs(rotY - ultimo.rotY) < 0.001) return;
+      ultimo = { x, z, rotY };
+      socket.emit('mover', { x, z, rotY });
+    }, 50);
+
     function mover(dt) {
       // hacia dónde mira la cámara, pero aplanado al suelo
       camera.getWorldDirection(adelante);
@@ -407,6 +453,11 @@
       const dt = Math.min(reloj.getDelta(), 0.05);
       if (controls.isLocked) mover(dt);
       pl.position.copy(camera.position);   // la luz sigue al jugador
+      for (const o of Object.values(otros)) {
+        o.mesh.position.lerp(o.destino, 0.25);
+        const d = o.rotDestino - o.mesh.rotation.y;
+        o.mesh.rotation.y += Math.atan2(Math.sin(d), Math.cos(d)) * 0.25;
+      }
       renderer.render(scene, camera);
     }
 
