@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>Laberinto</title>
 
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
@@ -25,8 +25,6 @@
 
     import * as THREE from 'three';
 
-    var rotarY = 10.0;
-
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -34,59 +32,72 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    //Cuadrado
+    //Cuadrado (el jugador)
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, shininess: 100 });
     const cube = new THREE.Mesh(geometry, material);
     scene.add(cube)
-
-    // Circulito
-    const geometry2 = new THREE.SphereGeometry(0.7, 32, 32);
-    const material2 = new THREE.MeshPhongMaterial({ color: 0xff0000, shininess: 100 });
-    const cube2 = new THREE.Mesh(geometry2, material2);
-    cube2.position.x = 2.5;
-    scene.add(cube2);
-
-    // Una dona
-    const geometry3 = new THREE.TorusGeometry(0.6, 0.25, 16, 100);
-    const material3 = new THREE.MeshPhongMaterial({ color: 0x0000ff, shininess: 100 });
-    const cube3 = new THREE.Mesh(geometry3, material3);
-    cube3.position.x = -2.5;
-    scene.add(cube3);
 
     // Luces
     const ambientLight = new THREE.AmbientLight(0xffaacc, 0.8); //  Pa la luz
     scene.add(ambientLight);
 
     const dl = new THREE.DirectionalLight(0xffffff, 1.5);
-    dl.position.set(10, 0, 0);
+    dl.position.set(10, 20, 5);
     scene.add(dl);
 
     const pl = new THREE.PointLight(0x00ffff, 15, 100);
-    pl.position.set(0, 3, -2);
+    pl.position.set(6, 4, 6); // centro del laberinto
     scene.add(pl);
 
-    camera.position.z = 8;
-    //camera.position.x = -2;
-    camera.position.y = 2.5;
+    // ───── Mapa: 1 = pared, 0 = pasillo ─────
+    const mapa = [
+      [1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 1, 0, 1],
+      [1, 1, 1, 0, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 1, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1],
+    ];
 
-    var posicionCubo = new THREE.Vector3(0, 0.2, -1);
+    const TAM = 2;   // lado de cada casilla
+    const ALTO = 2;  // altura de las paredes
+
+    // ───── Paredes ─────
+    const geoPared = new THREE.BoxGeometry(TAM, ALTO, TAM);
+    const matPared = new THREE.MeshPhongMaterial({ color: 0x5560aa });
+
+    for (let fila = 0; fila < mapa.length; fila++) {
+      for (let col = 0; col < mapa[fila].length; col++) {
+        if (mapa[fila][col] === 1) {
+          const pared = new THREE.Mesh(geoPared, matPared);
+          pared.position.set(col * TAM, ALTO / 2, fila * TAM);
+          scene.add(pared);
+        }
+      }
+    }
+
+    // ───── Piso ─────
+    const filas = mapa.length;
+    const cols = mapa[0].length;
+    const piso = new THREE.Mesh(
+      new THREE.PlaneGeometry(cols * TAM, filas * TAM),
+      new THREE.MeshPhongMaterial({ color: 0x1a1a2a })
+    );
+    piso.rotation.x = -Math.PI / 2;   // los planos nacen "de pie"; se acuestan girándolos
+    piso.position.set((cols - 1) * TAM / 2, 0, (filas - 1) * TAM / 2);
+    scene.add(piso);
+
+    // ───── Jugador y cámara ─────
+    cube.position.set(1 * TAM, 0.5, 1 * TAM);   // casilla fila 1, columna 1
+    camera.position.set(6, 18, 12);
+    camera.lookAt(6, 0, 6);                     // mira al centro del laberinto
 
     renderer.setAnimationLoop(animate);
 
     function animate(time) {
-
-      
-      const t = time * 0.0005; // Pa la velocidad
-      cube.position.x = Math.sin(t) * 10;
-
-      // El PointLight comparte la posición del cubo
-      pl.position.x = cube.position.x;
-      pl.position.y = cube.position.y;
-      pl.position.z = cube.position.z;
-
       renderer.render(scene, camera);
-
     }
 
 
