@@ -83,7 +83,7 @@
     const inicioFila = 1, inicioCol = 1;   // casilla donde empieza el jugador
 
     const TAM = 2;   // lado de cada casilla
-    const ALTO = 4.5;  // altura de las paredes
+    const ALTO = 2;  // altura de las paredes
 
     // ───── PASO 3: textura de papel tapiz amarillo (dibujada con código) ─────
     function crearTexturaTapiz() {
@@ -278,17 +278,29 @@
       return textura;
     }
 
-    // ───── Paredes ─────
-    const geoPared = new THREE.BoxGeometry(TAM, ALTO, TAM);
+    // ───── Paredes delgadas ─────
+    const GROSOR = 0.4;   // grosor de las paredes (TAM = 2 sería el bloque completo de antes)
     const matPared = new THREE.MeshPhongMaterial({ map: crearTexturaTapiz() });
+    const cajas = [];     // cada pared también se guarda aquí para las colisiones
+
+    // Crea una pared centrada en (cx, cz) de tamaño ancho (en x) por largo (en z)
+    function agregarPared(cx, cz, ancho, largo) {
+      const pared = new THREE.Mesh(new THREE.BoxGeometry(ancho, ALTO, largo), matPared);
+      pared.position.set(cx, ALTO / 2, cz);
+      scene.add(pared);
+      cajas.push({ x: cx, z: cz, mitadX: ancho / 2, mitadZ: largo / 2 });
+    }
 
     for (let fila = 0; fila < mapa.length; fila++) {
       for (let col = 0; col < mapa[fila].length; col++) {
-        if (mapa[fila][col] === 1) {
-          const pared = new THREE.Mesh(geoPared, matPared);
-          pared.position.set(col * TAM, ALTO / 2, fila * TAM);
-          scene.add(pared);
-        }
+        if (mapa[fila][col] !== 1) continue;
+        const x = col * TAM, z = fila * TAM;
+
+        agregarPared(x, z, GROSOR, GROSOR);   // un poste en el centro de la casilla
+
+        // Si la casilla de la derecha / de abajo también es pared, se unen con un tramo
+        if (mapa[fila][col + 1] === 1) agregarPared(x + TAM / 2, z, TAM - GROSOR, GROSOR);
+        if (mapa[fila + 1] && mapa[fila + 1][col] === 1) agregarPared(x, z + TAM / 2, GROSOR, TAM - GROSOR);
       }
     }
 
@@ -345,17 +357,11 @@
     // ───── Colisiones ─────
     const RADIO = 0.3;   // "grosor" del jugador
 
-    // ¿Esta posición queda dentro de una pared?
-    // Se revisan las 4 esquinas de un cuadrito alrededor del jugador.
+    // ¿Esta posición toca alguna pared? Cada pared es un rectángulo (caja);
+    // el jugador choca si está más cerca de su centro que (mitad de la caja + RADIO) en x y en z.
     function chocaConPared(x, z) {
-      const esquinas = [
-        [x - RADIO, z - RADIO], [x + RADIO, z - RADIO],
-        [x - RADIO, z + RADIO], [x + RADIO, z + RADIO],
-      ];
-      for (const [ex, ez] of esquinas) {
-        const col = Math.round(ex / TAM);    // posición -> índice en el mapa
-        const fila = Math.round(ez / TAM);
-        if (!mapa[fila] || mapa[fila][col] !== 0) return true;   // pared o fuera del mapa
+      for (const c of cajas) {
+        if (Math.abs(x - c.x) < c.mitadX + RADIO && Math.abs(z - c.z) < c.mitadZ + RADIO) return true;
       }
       return false;
     }
