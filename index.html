@@ -138,6 +138,44 @@ const inicioFila = 1, inicioCol = 1;
       return textura;
     }
 
+    // ───── Textura del techo (plafón de oficina, estilo backrooms) ─────
+    // Se dibuja UNA imagen grande para todo el techo: cada casilla del mapa = un cuadro de plafón.
+    function crearTexturaTecho(cols, filas) {
+      const PX = 96;   // píxeles por casilla
+      const color = document.createElement('canvas');
+      color.width = cols * PX;
+      color.height = filas * PX;
+      const g = color.getContext('2d');
+ 
+      g.fillStyle = '#9a8e4c';                       // plafón verde olivo
+      g.fillRect(0, 0, color.width, color.height);
+ 
+      // Grano fino (sin manchas, para que se vea uniforme)
+      const img = g.getImageData(0, 0, color.width, color.height);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const r = (Math.random() - 0.5) * 14;
+        img.data[i] += r; img.data[i + 1] += r; img.data[i + 2] += r;
+      }
+      g.putImageData(img, 0, 0);
+ 
+      // Cuadrícula fina: SUB cuadritos por lado de cada casilla (menos = cuadritos más grandes)
+      const SUB = 6;
+      const lado = PX / SUB;
+      g.fillStyle = 'rgba(55, 48, 20, 0.55)';
+      for (let c = 0; c <= cols * SUB; c++) g.fillRect(c * lado - 0.5, 0, 1.5, color.height);
+      for (let f = 0; f <= filas * SUB; f++) g.fillRect(0, f * lado - 0.5, color.width, 1.5);
+ 
+      // Juntas gruesas: separan los paneles grandes (uno por casilla)
+      g.fillStyle = '#4a4220';
+      for (let c = 0; c <= cols; c++) g.fillRect(c * PX - 2, 0, 4, color.height);
+      for (let f = 0; f <= filas; f++) g.fillRect(0, f * PX - 2, color.width, 4);
+ 
+      const textura = new THREE.CanvasTexture(color);
+      textura.colorSpace = THREE.SRGBColorSpace;
+      textura.anisotropy = 8;
+      return textura;
+    }
+
     // ───── Paredes ─────
     const geoPared = new THREE.BoxGeometry(TAM, ALTO, TAM);
     const matPared = new THREE.MeshPhongMaterial({ map: crearTexturaTapiz() });
@@ -162,6 +200,15 @@ const inicioFila = 1, inicioCol = 1;
     piso.rotation.x = -Math.PI / 2;
     piso.position.set((cols - 1) * TAM / 2, 0, (filas - 1) * TAM / 2);
     scene.add(piso);
+
+    // ───── Techo ─────
+    const techo = new THREE.Mesh(
+      new THREE.PlaneGeometry(cols * TAM, filas * TAM),
+      new THREE.MeshPhongMaterial({ map: crearTexturaTecho(cols, filas) })
+    );
+    techo.rotation.x = Math.PI / 2;        // mirando hacia abajo
+    techo.position.set((cols - 1) * TAM / 2, ALTO, (filas - 1) * TAM / 2);
+    scene.add(techo);
 
     // ───── PASO 2: primera persona ─────
     camera.position.set(1 * TAM, 1.0, 1 * TAM);   // a la altura de los "ojos", casilla (1,1)
