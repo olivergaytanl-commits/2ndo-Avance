@@ -6,6 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Laberinto</title>
 
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #inicio {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: rgba(0, 0, 0, 0.6); color: #fff; font: 28px sans-serif; cursor: pointer;
+    }
+  </style>
+
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
 
   <script type="importmap">
@@ -19,11 +27,14 @@
 </head>
 
 <body>
+  <div id="inicio">Haz clic para jugar (WASD + mouse, Esc para salir)</div>
+
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
   <script type="module">
 
     import * as THREE from 'three';
+    import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -32,22 +43,12 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    //Cuadrado (el jugador)
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, shininess: 100 });
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube)
-
     // Luces
-    const ambientLight = new THREE.AmbientLight(0xffaacc, 0.8); //  Pa la luz
+    const ambientLight = new THREE.AmbientLight(0xfff2c0, 0.6);
     scene.add(ambientLight);
 
-    const dl = new THREE.DirectionalLight(0xffffff, 1.5);
-    dl.position.set(10, 20, 5);
-    scene.add(dl);
-
-    const pl = new THREE.PointLight(0x00ffff, 15, 100);
-    pl.position.set(6, 4, 6); // centro del laberinto
+    // Luz que acompaña al jugador (como una linterna)
+    const pl = new THREE.PointLight(0xfff0c0, 4, 12);
     scene.add(pl);
 
     // ───── Mapa: 1 = pared, 0 = pasillo ─────
@@ -64,9 +65,62 @@
     const TAM = 2;   // lado de cada casilla
     const ALTO = 2;  // altura de las paredes
 
+    // ───── PASO 3: textura de papel tapiz amarillo (dibujada con código) ─────
+    function crearTexturaTapiz() {
+      const N = 512;
+      const lienzo = document.createElement('canvas');
+      lienzo.width = lienzo.height = N;
+      const g = lienzo.getContext('2d');
+
+      // 1) Color base amarillo sucio
+      g.fillStyle = '#a28d2c';
+      g.fillRect(0, 0, N, N);
+
+      // 2) Manchas suaves de humedad: círculos con degradado que se desvanece.
+      //    Se dibujan también desplazados ±N para que, si se salen por un borde,
+      //    reaparezcan por el lado contrario y la textura siga repitiéndose sin costura.
+      for (let i = 0; i < 14; i++) {
+        const x = Math.random() * N, y = Math.random() * N;
+        const radio = 40 + Math.random() * 70;
+        const fuerza = 0.05 + Math.random() * 0.08;
+        for (const ox of [-N, 0, N]) {
+          for (const oy of [-N, 0, N]) {
+            const grad = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, radio);
+            grad.addColorStop(0, `rgba(70, 55, 10, ${fuerza})`);
+            grad.addColorStop(1, 'rgba(70, 55, 10, 0)');
+            g.fillStyle = grad;
+            g.fillRect(x + ox - radio, y + oy - radio, radio * 2, radio * 2);
+          }
+        }
+      }
+
+      // 3) Rayas verticales oscuras cada 64 px (512 / 64 = 8 rayas, encaja justo para repetirse)
+      for (let x = 0; x < N; x += 64) {
+        const grad = g.createLinearGradient(x, 0, x + 14, 0);
+        grad.addColorStop(0, 'rgba(70, 55, 10, 0)');
+        grad.addColorStop(0.4, 'rgba(70, 55, 10, 0.35)');
+        grad.addColorStop(1, 'rgba(70, 55, 10, 0)');
+        g.fillStyle = grad;
+        g.fillRect(x, 0, 14, N);
+      }
+
+      // 4) Ruido de grano para que no se vea plano
+      const img = g.getImageData(0, 0, N, N);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const r = (Math.random() - 0.5) * 18;
+        img.data[i] += r; img.data[i + 1] += r; img.data[i + 2] += r;
+      }
+      g.putImageData(img, 0, 0);
+
+      const textura = new THREE.CanvasTexture(lienzo);
+      textura.colorSpace = THREE.SRGBColorSpace;
+      textura.anisotropy = 8;   // se ve mejor al mirar la pared de lado
+      return textura;
+    }
+
     // ───── Paredes ─────
     const geoPared = new THREE.BoxGeometry(TAM, ALTO, TAM);
-    const matPared = new THREE.MeshPhongMaterial({ color: 0x5560aa });
+    const matPared = new THREE.MeshPhongMaterial({ map: crearTexturaTapiz() });
 
     for (let fila = 0; fila < mapa.length; fila++) {
       for (let col = 0; col < mapa[fila].length; col++) {
@@ -83,41 +137,88 @@
     const cols = mapa[0].length;
     const piso = new THREE.Mesh(
       new THREE.PlaneGeometry(cols * TAM, filas * TAM),
-      new THREE.MeshPhongMaterial({ color: 0x1a1a2a })
+      new THREE.MeshPhongMaterial({ color: 0x5a4d1e })
     );
-    piso.rotation.x = -Math.PI / 2;   // los planos nacen "de pie"; se acuestan girándolos
+    piso.rotation.x = -Math.PI / 2;
     piso.position.set((cols - 1) * TAM / 2, 0, (filas - 1) * TAM / 2);
     scene.add(piso);
 
-    // ───── Jugador y cámara ─────
-    cube.position.set(1 * TAM, 0.5, 1 * TAM);   // casilla fila 1, columna 1
-    camera.position.set(6, 18, 12);
-    camera.lookAt(6, 0, 6);                     // mira al centro del laberinto
+    // ───── PASO 2: primera persona ─────
+    camera.position.set(1 * TAM, 1.0, 1 * TAM);   // a la altura de los "ojos", casilla (1,1)
+
+    const controls = new PointerLockControls(camera, renderer.domElement);
+    const pantallaInicio = document.getElementById('inicio');
+
+    pantallaInicio.addEventListener('click', () => controls.lock());
+    controls.addEventListener('lock', () => { pantallaInicio.style.display = 'none'; });
+    controls.addEventListener('unlock', () => { pantallaInicio.style.display = 'flex'; });
+
+    // Teclas
+    const teclas = {};
+    document.addEventListener('keydown', (e) => { teclas[e.key.toLowerCase()] = true; });
+    document.addEventListener('keyup', (e) => { teclas[e.key.toLowerCase()] = false; });
+
+    // ───── Colisiones ─────
+    const RADIO = 0.3;   // "grosor" del jugador
+
+    // ¿Esta posición queda dentro de una pared?
+    // Se revisan las 4 esquinas de un cuadrito alrededor del jugador.
+    function chocaConPared(x, z) {
+      const esquinas = [
+        [x - RADIO, z - RADIO], [x + RADIO, z - RADIO],
+        [x - RADIO, z + RADIO], [x + RADIO, z + RADIO],
+      ];
+      for (const [ex, ez] of esquinas) {
+        const col = Math.round(ex / TAM);    // posición -> índice en el mapa
+        const fila = Math.round(ez / TAM);
+        if (!mapa[fila] || mapa[fila][col] !== 0) return true;   // pared o fuera del mapa
+      }
+      return false;
+    }
+
+    // ───── Movimiento ─────
+    const VELOCIDAD = 4;
+    const adelante = new THREE.Vector3();
+    const reloj = new THREE.Clock();
+
+    function mover(dt) {
+      // hacia dónde mira la cámara, pero aplanado al suelo
+      camera.getWorldDirection(adelante);
+      adelante.y = 0;
+      adelante.normalize();
+      // "derecha" = adelante girado 90°
+      const derX = -adelante.z, derZ = adelante.x;
+
+      let ax = 0, az = 0;   // cuánto avanzar (adelante/atrás) y de lado
+      if (teclas['w']) ax += 1;
+      if (teclas['s']) ax -= 1;
+      if (teclas['d']) az += 1;
+      if (teclas['a']) az -= 1;
+      if (ax === 0 && az === 0) return;
+
+      const paso = VELOCIDAD * dt;
+      const dx = (adelante.x * ax + derX * az) * paso;
+      const dz = (adelante.z * ax + derZ * az) * paso;
+
+      // Cada eje por separado: así "resbalas" por las paredes en vez de quedarte pegado
+      if (!chocaConPared(camera.position.x + dx, camera.position.z)) camera.position.x += dx;
+      if (!chocaConPared(camera.position.x, camera.position.z + dz)) camera.position.z += dz;
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 
     renderer.setAnimationLoop(animate);
 
-    function animate(time) {
+    function animate() {
+      const dt = Math.min(reloj.getDelta(), 0.05);
+      if (controls.isLocked) mover(dt);
+      pl.position.copy(camera.position);   // la luz sigue al jugador
       renderer.render(scene, camera);
     }
-
-
-    document.addEventListener('keydown', (event) => {
-
-      if (event.key === 'a') {
-        cube.position.x -= 1;
-      }
-      if (event.key === 'd') {
-        cube.position.x += 1;
-      }
-      if (event.key === 'w') {
-        cube.position.z -= 1;
-      }
-      if (event.key === 's') {
-        cube.position.z += 1;
-      }
-
-    });
-
 
   </script>
 </body>
