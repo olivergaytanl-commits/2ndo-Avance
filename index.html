@@ -53,37 +53,37 @@
 
     // ───── Mapa: 1 = pared, 0 = pasillo ─────
     const mapa = [
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1],
-  [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1],
-  [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1],
-  [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
-  [1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
-  [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
-  [1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
-  [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
-  [1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
-  [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
-  [1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-  [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
-  [1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-  [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1],
-  [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
-  [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-];
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1],
+      [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
+      [1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+      [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+      [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+      [1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+      [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1],
+      [1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+      [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ];
 
-const inicioFila = 1, inicioCol = 1;
+    const inicioFila = 1, inicioCol = 1;   // casilla donde empieza el jugador
 
     const TAM = 2;   // lado de cada casilla
-    const ALTO = 4.5;  // altura de las paredes
+    const ALTO = 2;  // altura de las paredes
 
     // ───── PASO 3: textura de papel tapiz amarillo (dibujada con código) ─────
     function crearTexturaTapiz() {
@@ -138,91 +138,141 @@ const inicioFila = 1, inicioCol = 1;
       return textura;
     }
 
-    // ───── Textura del techo (plafón de oficina, estilo backrooms) ─────
-    // Se dibuja UNA imagen grande para todo el techo: cada casilla del mapa = un cuadro de plafón.
-    function crearTexturaTecho(cols, filas) {
-      const PX = 96;   // píxeles por casilla
+    // ───── Textura del techo: plafón verde olivo con lámparas fluorescentes ─────
+    // anchoMundo / altoMundo = tamaño del techo en unidades de la escena.
+    // Devuelve dos imágenes: el color (map) y qué zonas brillan (emissiveMap = los tubos).
+    function crearTexturaTecho(anchoMundo, altoMundo) {
+      const TILE = 1.1;      // lado de cada cuadro de plafón (los pasillos miden 2: no coinciden)
+      const PPU = 48;        // píxeles de imagen por unidad de la escena
+      const LUCES = true;    // false = techo sin lámparas
+      const SEP_LUCES = 6;   // cada cuántas unidades hay una lámpara
+
       const color = document.createElement('canvas');
-      color.width = cols * PX;
-      color.height = filas * PX;
+      const brillo = document.createElement('canvas');
+      color.width = brillo.width = Math.round(anchoMundo * PPU);
+      color.height = brillo.height = Math.round(altoMundo * PPU);
       const g = color.getContext('2d');
- 
-      g.fillStyle = '#9a8e4c';                       // plafón verde olivo
+      const b = brillo.getContext('2d');
+
+      const t = TILE * PPU;
+      const nx = Math.ceil(color.width / t);
+      const ny = Math.ceil(color.height / t);
+
+      g.fillStyle = '#868a56';                      // verde olivo
       g.fillRect(0, 0, color.width, color.height);
- 
+      b.fillStyle = '#000';                         // negro = no brilla
+      b.fillRect(0, 0, brillo.width, brillo.height);
+
       // Grano fino
       const img = g.getImageData(0, 0, color.width, color.height);
       for (let i = 0; i < img.data.length; i += 4) {
-        const r = (Math.random() - 0.5) * 14;
+        const r = (Math.random() - 0.5) * 12;
         img.data[i] += r; img.data[i + 1] += r; img.data[i + 2] += r;
       }
       g.putImageData(img, 0, 0);
- 
-      // ── Suciedad ──
-      // 1) Cada cuadro con un tono un poco distinto (unos más viejos que otros)
-      for (let f = 0; f < filas; f++) {
-        for (let c = 0; c < cols; c++) {
-          g.fillStyle = `rgba(50, 40, 5, ${Math.random() * 0.14})`;
-          g.fillRect(c * PX, f * PX, PX, PX);
+
+      // Cada cuadro con un tono apenas distinto
+      for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) {
+          g.fillStyle = `rgba(30, 35, 10, ${Math.random() * 0.1})`;
+          g.fillRect(i * t, j * t, t, t);
         }
       }
- 
-      // 2) Manchas grandes de humedad
-      for (let i = 0; i < cols * filas * 1.2; i++) {
+
+      // Manchas suaves de mugre
+      for (let k = 0; k < nx * ny * 0.6; k++) {
         const x = Math.random() * color.width, y = Math.random() * color.height;
-        const r = 15 + Math.random() * 55;
+        const r = t * (0.3 + Math.random() * 0.8);
         const grad = g.createRadialGradient(x, y, 0, x, y, r);
-        grad.addColorStop(0, `rgba(70, 48, 8, ${0.1 + Math.random() * 0.25})`);
-        grad.addColorStop(1, 'rgba(70, 48, 8, 0)');
+        grad.addColorStop(0, `rgba(35, 38, 10, ${0.06 + Math.random() * 0.12})`);
+        grad.addColorStop(1, 'rgba(35, 38, 10, 0)');
         g.fillStyle = grad;
         g.fillRect(x - r, y - r, r * 2, r * 2);
       }
- 
-      // 3) Mugre acumulada en los bordes de cada cuadro (oscurece hacia la junta)
-      const borde = 15;
-      for (let f = 0; f < filas; f++) {
-        for (let c = 0; c < cols; c++) {
-          const x0 = c * PX, y0 = f * PX;
-          const lados = [
-            [x0, y0, x0 + borde, y0, x0, y0, borde, PX],                     // izquierda
-            [x0 + PX, y0, x0 + PX - borde, y0, x0 + PX - borde, y0, borde, PX], // derecha
-            [x0, y0, x0, y0 + borde, x0, y0, PX, borde],                     // arriba
-            [x0, y0 + PX, x0, y0 + PX - borde, x0, y0 + PX - borde, PX, borde], // abajo
-          ];
-          for (const [gx0, gy0, gx1, gy1, rx, ry, rw, rh] of lados) {
-            const grad = g.createLinearGradient(gx0, gy0, gx1, gy1);
-            grad.addColorStop(0, 'rgba(45, 32, 5, 0.4)');
-            grad.addColorStop(1, 'rgba(45, 32, 5, 0)');
-            g.fillStyle = grad;
-            g.fillRect(rx, ry, rw, rh);
+
+      // Juntas entre cuadros: finas y apenas visibles
+      g.fillStyle = 'rgba(30, 33, 10, 0.3)';
+      for (let i = 0; i <= nx; i++) g.fillRect(i * t - 0.5, 0, 1.5, color.height);
+      for (let j = 0; j <= ny; j++) g.fillRect(0, j * t - 0.5, color.width, 1.5);
+
+      // Lámparas fluorescentes: marco oscuro + dos tubos que brillan
+      if (LUCES) {
+        const w = 1.7 * PPU, h = 0.45 * PPU;           // largo y ancho de la lámpara
+        const zMax = altoMundo - TAM / 2;               // el techo está "al revés" en z
+        for (let x = 2; x < anchoMundo - 1; x += SEP_LUCES) {
+          for (let z = 2; z < altoMundo - 1; z += SEP_LUCES) {
+            const px = (x + TAM / 2) * PPU - w / 2;     // (+TAM/2 porque el techo empieza en x = -TAM/2)
+            const py = (zMax - z) * PPU - h / 2;
+            g.fillStyle = '#16180d';  g.fillRect(px - 3, py - 3, w + 6, h + 6);   // marco
+            g.fillStyle = '#3a3d28';  g.fillRect(px, py, w, h);                    // fondo interno
+            for (const f of [0.22, 0.58]) {                                        // dos tubos
+              g.fillStyle = '#f4f7e2'; g.fillRect(px + 4, py + h * f, w - 8, h * 0.2);
+              b.fillStyle = '#e8f0c8'; b.fillRect(px + 4, py + h * f, w - 8, h * 0.2);
+            }
           }
         }
       }
- 
-      // 4) Puntitos de mugre
-      for (let i = 0; i < cols * filas * 3; i++) {
-        const t = 1 + Math.random() * 2.5;
-        g.fillStyle = `rgba(40, 28, 5, ${0.15 + Math.random() * 0.3})`;
-        g.fillRect(Math.random() * color.width, Math.random() * color.height, t, t);
-      }
- 
-      // 5) Chorreaduras (agua que escurrió)
-      for (let i = 0; i < cols * filas * 0.8; i++) {
-        const x = Math.random() * color.width, y = Math.random() * color.height;
-        const largo = 20 + Math.random() * 50;
-        const grad = g.createLinearGradient(x, y, x, y + largo);
-        grad.addColorStop(0, `rgba(60, 40, 5, ${0.15 + Math.random() * 0.2})`);
-        grad.addColorStop(1, 'rgba(60, 40, 5, 0)');
+
+      const mapaColor = new THREE.CanvasTexture(color);
+      const mapaBrillo = new THREE.CanvasTexture(brillo);
+      mapaColor.colorSpace = mapaBrillo.colorSpace = THREE.SRGBColorSpace;
+      mapaColor.anisotropy = mapaBrillo.anisotropy = 8;
+      return { mapaColor, mapaBrillo };
+    }
+
+    // ───── Textura del piso: alfombra verde grisácea ─────
+    function crearTexturaPiso(anchoMundo, altoMundo) {
+      const PPU = 48;
+      const lienzo = document.createElement('canvas');
+      lienzo.width = Math.round(anchoMundo * PPU);
+      lienzo.height = Math.round(altoMundo * PPU);
+      const g = lienzo.getContext('2d');
+
+      g.fillStyle = '#6c7040';                       // verde grisáceo
+      g.fillRect(0, 0, lienzo.width, lienzo.height);
+
+      // Zonas más claras y más oscuras, muy grandes y suaves (desgaste de la alfombra)
+      for (let k = 0; k < anchoMundo * altoMundo / 6; k++) {
+        const x = Math.random() * lienzo.width, y = Math.random() * lienzo.height;
+        const r = 60 + Math.random() * 160;
+        const claro = Math.random() < 0.5;
+        const grad = g.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, claro ? 'rgba(150, 155, 90, 0.10)' : 'rgba(30, 35, 10, 0.12)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         g.fillStyle = grad;
-        g.fillRect(x, y, 2 + Math.random() * 3, largo);
+        g.fillRect(x - r, y - r, r * 2, r * 2);
       }
- 
-      // Juntas gruesas: separan los cuadros (uno por casilla)
-      g.fillStyle = '#4a4220';
-      for (let c = 0; c <= cols; c++) g.fillRect(c * PX - 1, 0, 2, color.height);
-      for (let f = 0; f <= filas; f++) g.fillRect(0, f * PX - 1, color.width, 2);
- 
-      const textura = new THREE.CanvasTexture(color);
+
+      // Motivo diminuto de la alfombra: puntitos en cuadrícula, con las filas desfasadas
+      const paso = 7;
+      for (let y = 0; y < lienzo.height; y += paso) {
+        const desfase = (Math.floor(y / paso) % 2) * (paso / 2);
+        for (let x = 0; x < lienzo.width; x += paso) {
+          g.fillStyle = 'rgba(95, 70, 40, 0.28)';   // puntito rojizo apagado
+          g.fillRect(x + desfase, y, 1.5, 1.5);
+        }
+      }
+
+      // Fibras: ruido fuerte y fino
+      const img = g.getImageData(0, 0, lienzo.width, lienzo.height);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const r = (Math.random() - 0.5) * 34;
+        img.data[i] += r; img.data[i + 1] += r; img.data[i + 2] += r * 0.8;
+      }
+      g.putImageData(img, 0, 0);
+
+      // Algunas manchas oscuras
+      for (let k = 0; k < anchoMundo * altoMundo / 14; k++) {
+        const x = Math.random() * lienzo.width, y = Math.random() * lienzo.height;
+        const r = 10 + Math.random() * 30;
+        const grad = g.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, `rgba(25, 25, 5, ${0.08 + Math.random() * 0.15})`);
+        grad.addColorStop(1, 'rgba(25, 25, 5, 0)');
+        g.fillStyle = grad;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+
+      const textura = new THREE.CanvasTexture(lienzo);
       textura.colorSpace = THREE.SRGBColorSpace;
       textura.anisotropy = 8;
       return textura;
@@ -247,23 +297,38 @@ const inicioFila = 1, inicioCol = 1;
     const cols = mapa[0].length;
     const piso = new THREE.Mesh(
       new THREE.PlaneGeometry(cols * TAM, filas * TAM),
-      new THREE.MeshPhongMaterial({ color: 0x5a4d1e })
+      new THREE.MeshPhongMaterial({ map: crearTexturaPiso(cols * TAM, filas * TAM), specular: 0x000000 })
     );
     piso.rotation.x = -Math.PI / 2;
     piso.position.set((cols - 1) * TAM / 2, 0, (filas - 1) * TAM / 2);
     scene.add(piso);
 
     // ───── Techo ─────
+    const texTecho = crearTexturaTecho(cols * TAM, filas * TAM);
     const techo = new THREE.Mesh(
       new THREE.PlaneGeometry(cols * TAM, filas * TAM),
-      new THREE.MeshPhongMaterial({ map: crearTexturaTecho(cols, filas) })
+      new THREE.MeshPhongMaterial({
+        map: texTecho.mapaColor,
+        emissive: 0xffffff,                // las lámparas brillan...
+        emissiveMap: texTecho.mapaBrillo,  // ...solo donde esta imagen no es negra
+        specular: 0x000000,
+      })
     );
     techo.rotation.x = Math.PI / 2;        // mirando hacia abajo
     techo.position.set((cols - 1) * TAM / 2, ALTO, (filas - 1) * TAM / 2);
     scene.add(techo);
 
     // ───── PASO 2: primera persona ─────
-    camera.position.set(1 * TAM, 1.0, 1 * TAM);   // a la altura de los "ojos", casilla (1,1)
+    camera.position.set(inicioCol * TAM, 1.0, inicioFila * TAM);   // a la altura de los "ojos", sobre la S
+
+    // Girar la cámara para que mire hacia un pasillo libre (y no hacia una pared)
+    const direcciones = [[0, -1, 0], [0, 1, Math.PI], [1, 0, -Math.PI / 2], [-1, 0, Math.PI / 2]]; // [dCol, dFila, giro]
+    for (const [dc, df, giro] of direcciones) {
+      if (mapa[inicioFila + df] && mapa[inicioFila + df][inicioCol + dc] === 0) {
+        camera.rotation.y = giro;
+        break;
+      }
+    }
 
     const controls = new PointerLockControls(camera, renderer.domElement);
     const pantallaInicio = document.getElementById('inicio');
