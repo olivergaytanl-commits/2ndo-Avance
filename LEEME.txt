@@ -1,0 +1,20 @@
+ONE WAY OUT - PROYECTO UNIFICADO
+
+Estructura:
+- index.html: menú principal del primer avance.
+- lobby.html: sala de espera visual.
+- gameplay.html: ventana de juego previa con acceso al laberinto 3D.
+- laberinto.html: juego 3D del segundo avance.
+- settings.html: opciones.
+- scores.html: récords de muestra.
+- pause.html: ventana de pausa visual.
+- servidor.js / js/personaje.js: servidor y lógica del laberinto multijugador.
+
+Para ejecutar:
+1. Instala Node.js.
+2. Abre una terminal en esta carpeta.
+3. Ejecuta: npm install
+4. Ejecuta: npm start
+5. Abre http://localhost:3000
+
+Nota: Las pantallas del primer avance conservan sus enlaces y funciones visuales. El laberinto 3D del segundo avance se conserva como laberinto.html. Algunas pantallas (por ejemplo lobby, récords y opciones) siguen siendo prototipos visuales y no están conectadas a la lógica del juego.

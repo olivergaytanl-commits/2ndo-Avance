@@ -1,0 +1,102 @@
+:root{
+  --wall-a: #948753;
+  --wall-b: #6e6438;
+  --wall-dark: #443d20;
+  --shadow: #0c0a06;
+  --fluoro: #f6f1cf;
+  --fluoro-dim: #cabf85;
+  --exit-glow: #5c8a52;
+  --exit-glow-dim: #3c5c37;
+  --danger: #a85b3c;
+  --stain: #38310f;
+}
+
+*{ box-sizing:border-box; }
+html,body{
+  margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+  font-family:'IBM Plex Mono', monospace; background:#000;
+}
+
+.screen{
+  position:relative; width:100%; height:100vh; overflow:hidden;
+  perspective: 700px;
+}
+
+/* --- la escena 3D, tenue y casi sin iluminar --- */
+.scene{
+  position:absolute; inset:0;
+  background: radial-gradient(ellipse at 50% 45%, var(--wall-a) 0%, var(--wall-b) 40%, #050402 100%);
+  display:flex; align-items:center; justify-content:center;
+  transform-style:preserve-3d;
+}
+
+.stain{
+  position:absolute; border-radius:50%;
+  background: radial-gradient(circle, var(--stain) 0%, transparent 70%);
+  opacity:0.5;
+}
+
+/* Pa que este oscuro */
+.ambient-dark{
+  position:absolute; inset:0; z-index:4;
+  background: rgba(3,2,1,0.72);
+}
+
+.grain{
+  position:absolute; inset:0; z-index:20; pointer-events:none;
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.09) 0px, rgba(0,0,0,0.09) 1px, transparent 1px, transparent 3px);
+  mix-blend-mode: multiply; opacity:0.5;
+}
+.vignette{
+  position:absolute; inset:0; z-index:19; pointer-events:none;
+  box-shadow: inset 0 0 220px 110px rgba(0,0,0,0.85);
+}
+
+/* ================= HUD ================= */
+.hud{ position:absolute; inset:0; z-index:30; pointer-events:none; }
+
+/* Estado de la partida */
+.hud-status{
+  position:absolute; top:22px; left:26px;
+  color: var(--fluoro-dim); font-size:11px; letter-spacing:0.06em; line-height:1.7;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+.hud-status b{ color: var(--fluoro); }
+
+/* Cuanto falta para la meta */
+.hud-rival{
+  position:absolute; top:22px; right:26px;
+  color: var(--fluoro-dim); font-size:11px; letter-spacing:0.06em; line-height:1.7;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+.hud-rival b{ color: var(--danger); }
+
+/* Pa la batería de la linterna */
+.battery{
+  position:absolute; bottom:26px; left:26px;
+  gap:10px;
+}
+.battery-label{ color:var(--fluoro-dim); font-size:10px; letter-spacing:0.08em; }
+.battery-bar{
+  width:140px; height:10px; border:1px solid var(--fluoro-dim);
+  position:relative;
+}
+.battery-fill{
+  position:absolute; inset:1px; width:58%;
+  background: var(--fluoro-dim);
+}
+
+/* Texto de la derecha */
+.objective{
+  position:absolute; bottom:26px; right:26px;
+  color: var(--fluoro); font-size:12px; letter-spacing:0.05em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+
+/* Puntito de en medio */
+.reticle{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:4px; height:4px; border-radius:50%;
+  background: rgba(246,241,207,0.8);
+}
