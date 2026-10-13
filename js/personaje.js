@@ -4,11 +4,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// ---------- Ajustes (cámbialos si algo no se ve bien) ----------
+// ---------- Ajustes ----------
 const ALTURA_MODELO = 1.75;      // metros; solo se usa si el modelo viene con escala rara
 const ROTACION_MODELO = 0;       // pon Math.PI si el personaje camina "de espaldas"
 const FADE = 0.2;                // segundos de transición entre animaciones
-const VEL_ANIM = { Idle: 1, Walk: 1.4, Run: 1.2 }; // velocidad de reproducción (ajusta si "patina")
+const VEL_ANIM = { Idle: 1, Walk: 1.4, Run: 1.2 }; // velocidad de reproducción (ajustar si "patina")
 const QUITAR_ROOT_MOTION = true; // evita que Walk/Run desplacen al personaje por sí solos
 
 // Si un clip trae movimiento de la cadera hacia adelante (root motion),
@@ -49,7 +49,7 @@ export function cargarPersonaje(url) {
       const raiz = new THREE.Group();
       raiz.add(modelo);
 
-      // Animaciones por nombre (sin importar mayúsculas)
+      // Animaciones por nombre
       const mixer = new THREE.AnimationMixer(modelo);
       const acciones = {};
       for (const clip of gltf.animations) {

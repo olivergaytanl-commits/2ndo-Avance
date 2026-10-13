@@ -207,6 +207,7 @@
       const nx = Math.ceil(color.width / t);
       const ny = Math.ceil(color.height / t);
 
+      //Pa los colores
       g.fillStyle = '#868a56';                      // verde olivo
       g.fillRect(0, 0, color.width, color.height);
       b.fillStyle = '#000';                         // negro = no brilla
@@ -220,7 +221,7 @@
       }
       g.putImageData(img, 0, 0);
 
-      // Cada cuadro con un tono apenas distinto
+      // Pa que los cuadrados se vean un poco distintos
       for (let j = 0; j < ny; j++) {
         for (let i = 0; i < nx; i++) {
           g.fillStyle = `rgba(30, 35, 10, ${Math.random() * 0.1})`;
@@ -228,7 +229,7 @@
         }
       }
 
-      // Manchas suaves de mugre
+      // Pa las manchitas de mugre
       for (let k = 0; k < nx * ny * 0.6; k++) {
         const x = Math.random() * color.width, y = Math.random() * color.height;
         const r = t * (0.3 + Math.random() * 0.8);
@@ -239,14 +240,14 @@
         g.fillRect(x - r, y - r, r * 2, r * 2);
       }
 
-      // Juntas entre cuadros: finas y apenas visibles
+      // Estos son los bordes
       g.fillStyle = 'rgba(30, 33, 10, 0.3)';
       for (let i = 0; i <= nx; i++) g.fillRect(i * t - 0.5, 0, 1.5, color.height);
       for (let j = 0; j <= ny; j++) g.fillRect(0, j * t - 0.5, color.width, 1.5);
 
-      // Lámparas fluorescentes: marco oscuro + dos tubos que brillan
+      // Para las lámparas del techo
       if (LUCES) {
-        const w = 1.7 * PPU, h = 0.45 * PPU;           // largo y ancho de la lámpara
+        const w = 1.7 * PPU, h = 0.45 * PPU;           // largo y ancho
         const zMax = altoMundo - TAM / 2;               // el techo está "al revés" en z
         for (let x = 2; x < anchoMundo - 1; x += SEP_LUCES) {
           for (let z = 2; z < altoMundo - 1; z += SEP_LUCES) {
@@ -269,7 +270,7 @@
       return { mapaColor, mapaBrillo };
     }
 
-    // ───── Textura del piso: alfombra verde grisácea ─────
+    // ───── Textura del piso ─────
     function crearTexturaPiso(anchoMundo, altoMundo) {
       const PPU = 48;
       const lienzo = document.createElement('canvas');
@@ -280,7 +281,7 @@
       g.fillStyle = '#6c7040';                       // verde grisáceo
       g.fillRect(0, 0, lienzo.width, lienzo.height);
 
-      // Zonas más claras y más oscuras, muy grandes y suaves (desgaste de la alfombra)
+      // Pal desgaste de la alfombra
       for (let k = 0; k < anchoMundo * altoMundo / 6; k++) {
         const x = Math.random() * lienzo.width, y = Math.random() * lienzo.height;
         const r = 60 + Math.random() * 160;
@@ -302,7 +303,7 @@
         }
       }
 
-      // Fibras: ruido fuerte y fino
+      // Fibras
       const img = g.getImageData(0, 0, lienzo.width, lienzo.height);
       for (let i = 0; i < img.data.length; i += 4) {
         const r = (Math.random() - 0.5) * 34;
@@ -328,7 +329,7 @@
     }
 
     // ───── Paredes delgadas ─────
-    const GROSOR = 0.4;   // grosor de las paredes (TAM = 2 sería el bloque completo de antes)
+    const GROSOR = 0.4;   // grosor de las paredes
     const matPared = new THREE.MeshPhongMaterial({ map: crearTexturaTapiz() });
     const cajas = [];     // cada pared también se guarda aquí para las colisiones
 
@@ -379,8 +380,8 @@
     techo.position.set((cols - 1) * TAM / 2, ALTO, (filas - 1) * TAM / 2);
     scene.add(techo);
 
-    // ───── PASO 2: primera persona ─────
-    camera.position.set(inicioCol * TAM, 1.0, inicioFila * TAM);   // a la altura de los "ojos", sobre la S
+    // ───── Primera persona ─────
+    camera.position.set(inicioCol * TAM, 1.0, inicioFila * TAM);   // a la altura de los "ojos"
 
     // Girar la cámara para que mire hacia un pasillo libre (y no hacia una pared)
     const direcciones = [[0, -1, 0], [0, 1, Math.PI], [1, 0, -Math.PI / 2], [-1, 0, Math.PI / 2]]; // [dCol, dFila, giro]
@@ -477,7 +478,7 @@
     }
 
     socket.on('init', ({ id, personaje: miPersonaje, jugadores }) => {
-      cargarMiPersonaje(miPersonaje);   // mi modelo es el que me asignó el servidor
+      cargarMiPersonaje(miPersonaje);   // El servidor asigna el modelo
       for (const j of Object.values(jugadores)) if (j.id !== id) crearOtro(j);
     });
     socket.on('jugadorNuevo', crearOtro);
@@ -509,7 +510,7 @@
         rotY = Math.atan2(dirTmp.x, dirTmp.z);
       }
       const anim = miAnim;
-      // Si cambió la animación también se envía, para que el otro vea cuando te detienes
+      // Si cambia la animación también se envía, para que el otro vea cuando te detienes
       if (anim === ultimo.anim && Math.abs(x - ultimo.x) + Math.abs(z - ultimo.z) + Math.abs(rotY - ultimo.rotY) < 0.001) return;
       ultimo = { x, z, rotY, anim };
       socket.emit('mover', { x, z, rotY, anim });
@@ -542,7 +543,7 @@
       return { x: dx / largo, z: dz / largo };   // hacia dónde caminó (en el mundo)
     }
 
-    // ───── Personaje 3D y vista (V = primera / tercera persona) ─────
+    // ───── Personaje 3D y vista tercera persona) ─────
     const DIST_CAMARA_3P = 3.2;      // qué tan atrás se pone la cámara en tercera persona
     const ALTURA_PIVOTE_3P = 1.55;   // altura del punto al que mira la cámara (cabeza/pecho)
 
@@ -551,7 +552,7 @@
     const estadoModelo = document.getElementById('estadoModelo');
     estadoModelo.textContent = 'Conectando…';
 
-    // Se llama cuando el servidor responde con el personaje que me tocó (evento 'init')
+    // Se llama cuando el servidor responde con el personaje que tocó
     function cargarMiPersonaje(nombre) {
       const ruta = rutaModelo(nombre);
       estadoModelo.textContent = 'Cargando ' + nombre + '…';
