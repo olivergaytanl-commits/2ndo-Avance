@@ -18,15 +18,31 @@ app.get('/', (req, res) => {
 // ───── Multijugador ─────
 const jugadores = {};
 
-io.on('connection', (socket) => {
-  jugadores[socket.id] = { id: socket.id, x: 2, z: 2, rotY: 0 };
+// Personajes disponibles = nombres de los .glb en modelos/ (sin la extensión)
+const PERSONAJES = ['Bryce1', 'Martha1'];
 
-  socket.emit('init', { id: socket.id, jugadores });
+// Elige el personaje que MENOS jugadores estén usando ahora mismo.
+// Así los dos primeros jugadores nunca comparten skin, y cuando alguien se
+// desconecta su personaje queda libre para el siguiente que entre.
+// (Si hay más jugadores que personajes, se reparten parejo.)
+function elegirPersonaje() {
+  const uso = Object.fromEntries(PERSONAJES.map((p) => [p, 0]));
+  for (const j of Object.values(jugadores)) uso[j.personaje]++;
+  return PERSONAJES.reduce((mejor, p) => (uso[p] < uso[mejor] ? p : mejor));
+}
+
+io.on('connection', (socket) => {
+  jugadores[socket.id] = { id: socket.id, x: 2, z: 2, rotY: 0, anim: 'Idle', personaje: elegirPersonaje() };
+  console.log(`+ ${socket.id} -> ${jugadores[socket.id].personaje}`);
+
+  // 'personaje' = el que le tocó a este jugador; 'jugadores' trae el de cada uno
+  socket.emit('init', { id: socket.id, personaje: jugadores[socket.id].personaje, jugadores });
   socket.broadcast.emit('jugadorNuevo', jugadores[socket.id]);
 
-  socket.on('mover', ({ x, z, rotY }) => {
+  socket.on('mover', ({ x, z, rotY, anim }) => {
     if (![x, z, rotY].every(Number.isFinite)) return;
-    Object.assign(jugadores[socket.id], { x, z, rotY });
+    if (!['Idle', 'Walk', 'Run'].includes(anim)) return;
+    Object.assign(jugadores[socket.id], { x, z, rotY, anim });
     socket.broadcast.emit('estado', jugadores[socket.id]);
   });
 
