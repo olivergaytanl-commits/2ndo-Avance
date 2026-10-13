@@ -10,8 +10,10 @@
     body { margin: 0; overflow: hidden; }
     #inicio {
       position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 10px;
       background: rgba(0, 0, 0, 0.6); color: #fff; font: 28px sans-serif; cursor: pointer;
     }
+    #inicio small { font-size: 16px; opacity: 0.8; }
   </style>
 
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -27,7 +29,11 @@
 </head>
 
 <body>
-  <div id="inicio">Haz clic para jugar (WASD + mouse, Esc para salir)</div>
+  <div id="inicio">
+    <div>Haz clic para jugar (WASD + mouse, Esc para salir)</div>
+    <small>V: cambiar entre primera y tercera persona</small>
+    <small id="estadoModelo"></small>
+  </div>
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
@@ -39,6 +45,7 @@
 
     import * as THREE from 'three';
     import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+    import { cargarPersonaje } from '/js/personaje.js';   // tu modelo .glb con animaciones Idle / Walk / Run
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -377,7 +384,7 @@
 
     // ───── Multijugador ─────
     const socket = io();
-    const otros = {};   // id -> { mesh, destino, rotDestino }
+    const otros = {};   // id -> { mesh, destino, rotDestino, modelo }
 
     const geoOtro = new THREE.CapsuleGeometry(0.3, 0.6, 4, 8);
 
@@ -390,7 +397,21 @@
       mesh.add(nariz);
       mesh.position.set(j.x, 0.6, j.z);
       scene.add(mesh);
-      otros[j.id] = { mesh, destino: new THREE.Vector3(j.x, 0.6, j.z), rotDestino: j.rotY };
+      const otro = { mesh, destino: new THREE.Vector3(j.x, 0.6, j.z), rotDestino: j.rotY, modelo: null };
+      otros[j.id] = otro;
+
+      // Su cuerpo es tu modelo .glb. Mientras carga (o si no se encuentra) se ve la cápsula de siempre.
+      cargarPersonaje(RUTA_MODELO)
+        .then((p) => {
+          if (otros[j.id] !== otro) return;   // ese jugador ya se fue
+          p.raiz.position.y = -0.6;           // la cápsula está a 0.6 de altura; el modelo debe pisar el suelo
+          p.raiz.rotation.y = Math.PI;        // la cápsula mira hacia -Z y el modelo hacia +Z
+          mesh.add(p.raiz);
+          mesh.material.visible = false;      // se oculta la cápsula...
+          nariz.visible = false;              // ...y su nariz
+          otro.modelo = p;
+        })
+        .catch(() => { /* sin modelo: se queda la cápsula */ });
     }
 
     socket.on('init', ({ id, jugadores }) => {
@@ -430,7 +451,7 @@
       if (teclas['s']) ax -= 1;
       if (teclas['d']) az += 1;
       if (teclas['a']) az -= 1;
-      if (ax === 0 && az === 0) return;
+      if (ax === 0 && az === 0) return null;
 
       const paso = VELOCIDAD * dt;
       const dx = (adelante.x * ax + derX * az) * paso;
@@ -439,6 +460,67 @@
       // Cada eje por separado: así "resbalas" por las paredes en vez de quedarte pegado
       if (!chocaConPared(camera.position.x + dx, camera.position.z)) camera.position.x += dx;
       if (!chocaConPared(camera.position.x, camera.position.z + dz)) camera.position.z += dz;
+
+      const largo = Math.hypot(dx, dz);
+      return { x: dx / largo, z: dz / largo };   // hacia dónde caminó (en el mundo)
+    }
+
+    // ───── Personaje 3D y vista (V = primera / tercera persona) ─────
+    const RUTA_MODELO = '/modelos/Martha1.glb';   // tu personaje (carpeta modelos/)
+    const DIST_CAMARA_3P = 3.2;      // qué tan atrás se pone la cámara en tercera persona
+    const ALTURA_PIVOTE_3P = 1.55;   // altura del punto al que mira la cámara (cabeza/pecho)
+
+    let vistaTercera = false;
+    let personaje = null;
+    const estadoModelo = document.getElementById('estadoModelo');
+    estadoModelo.textContent = 'Cargando personaje…';
+    cargarPersonaje(RUTA_MODELO)
+      .then((p) => {
+        personaje = p;
+        personaje.raiz.visible = false;      // en primera persona no se ve el cuerpo
+        scene.add(personaje.raiz);
+        estadoModelo.textContent = 'Personaje listo';
+      })
+      .catch((err) => {
+        console.error('No se pudo cargar el personaje:', err);
+        estadoModelo.textContent = 'No se encontró ' + RUTA_MODELO + ' (revisa la carpeta modelos/)';
+      });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'v') vistaTercera = !vistaTercera;
+    });
+
+    // Pone al personaje donde está el jugador y lo anima (Idle si está quieto, Walk si camina)
+    function actualizarPersonaje(dt, mov) {
+      if (!personaje) return;
+      personaje.raiz.position.set(camera.position.x, 0, camera.position.z);
+      if (mov) personaje.girarHacia(Math.atan2(mov.x, mov.z), dt);
+      personaje.setEstado(mov ? 'Walk' : 'Idle');
+      personaje.mixer.update(dt);
+    }
+
+    // En tercera persona la cámara se aleja hacia atrás desde la cabeza, pero se detiene si choca
+    // con una pared o con el techo. La posición REAL del jugador (camera.position) no se toca:
+    // se mueve la cámara solo para dibujar y se devuelve a su lugar justo después (ver animate).
+    const dirCam = new THREE.Vector3();
+    const posJugador = new THREE.Vector3();
+    function colocarCamara3P() {
+      camera.getWorldDirection(dirCam);
+      let mejor = 0;
+      for (let d = 0.15; d <= DIST_CAMARA_3P; d += 0.15) {
+        const x = posJugador.x - dirCam.x * d;
+        const y = ALTURA_PIVOTE_3P - dirCam.y * d;
+        const z = posJugador.z - dirCam.z * d;
+        if (y > ALTO - 0.15 || y < 0.15 || chocaConPared(x, z)) break;
+        mejor = d;
+      }
+      camera.position.set(
+        posJugador.x - dirCam.x * mejor,
+        ALTURA_PIVOTE_3P - dirCam.y * mejor,
+        posJugador.z - dirCam.z * mejor
+      );
+      // Si la cámara quedó pegada a la cabeza, se oculta el cuerpo para no ver "por dentro"
+      if (personaje) personaje.raiz.visible = mejor > 0.8;
     }
 
     window.addEventListener('resize', () => {
@@ -451,14 +533,30 @@
 
     function animate() {
       const dt = Math.min(reloj.getDelta(), 0.05);
-      if (controls.isLocked) mover(dt);
+      let mov = null;
+      if (controls.isLocked) mov = mover(dt);
       pl.position.copy(camera.position);   // la luz sigue al jugador
+      actualizarPersonaje(dt, mov);
       for (const o of Object.values(otros)) {
+        const falta = o.mesh.position.distanceTo(o.destino);   // qué tanto le falta para llegar (si se mueve, es > 0)
         o.mesh.position.lerp(o.destino, 0.25);
         const d = o.rotDestino - o.mesh.rotation.y;
         o.mesh.rotation.y += Math.atan2(Math.sin(d), Math.cos(d)) * 0.25;
+        if (o.modelo) {
+          o.modelo.setEstado(falta > 0.04 ? 'Walk' : 'Idle');
+          o.modelo.mixer.update(dt);
+        }
       }
-      renderer.render(scene, camera);
+
+      if (vistaTercera) {
+        posJugador.copy(camera.position);   // posición real del jugador
+        colocarCamara3P();
+        renderer.render(scene, camera);
+        camera.position.copy(posJugador);   // se devuelve: colisiones y multijugador usan la posición real
+      } else {
+        if (personaje) personaje.raiz.visible = false;
+        renderer.render(scene, camera);
+      }
     }
 
   </script>

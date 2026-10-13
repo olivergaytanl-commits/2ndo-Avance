@@ -7,6 +7,10 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server);
 
+// Archivos del personaje: código (js/) y modelos 3D (.glb en modelos/)
+app.use('/js', express.static(join(__dirname, 'js')));
+app.use('/modelos', express.static(join(__dirname, 'modelos')));
+
 app.get('/', (req, res) => {
   res.sendFile(join(__dirname, 'index.html'));
 });
