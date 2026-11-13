@@ -1,0 +1,144 @@
+:root{
+  --wall-a: #b6a968;
+  --wall-b: #978a4c;
+  --wall-dark: #6e6438;
+  --shadow: #14120b;
+  --fluoro: #f6f1cf;
+  --fluoro-dim: #cabf85;
+  --exit-glow: #5c8a52;
+  --exit-glow-dim: #3c5c37;
+  --danger: #a85b3c;
+  --danger-dim: #7a4028;
+  --stain: #4d4526;
+}
+
+*{ box-sizing:border-box; }
+html,body{
+  margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+  font-family:'IBM Plex Mono', monospace; background:var(--shadow);
+}
+
+.screen{ position:relative; width:100%; height:100vh; overflow:hidden; }
+
+/* --- Fondo --- */
+.game-behind{
+  position:absolute; inset:0;
+  background: radial-gradient(ellipse at 50% 35%, var(--wall-a) 0%, var(--wall-b) 45%, var(--shadow) 100%);
+  filter: blur(6px) brightness(0.55) saturate(0.8);
+  transform: scale(1.04);
+}
+.stain{
+  position:absolute; border-radius:50%;
+  background: radial-gradient(circle, var(--stain) 0%, transparent 70%);
+  opacity:0.3;
+}
+
+.dim{
+  position:absolute; inset:0;
+  background: rgba(10,9,5,0.55);
+  z-index:5;
+}
+
+.grain{
+  position:absolute; inset:0; z-index:12; pointer-events:none;
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 3px);
+  mix-blend-mode: multiply; opacity:0.5;
+}
+
+/* --- HUD --- */
+.hud{
+  position:absolute; top:22px; left:28px; z-index:10;
+  color: var(--fluoro-dim); font-size:11px; letter-spacing:0.06em; line-height:1.6;
+  opacity:0.55;
+}
+.hud b{ color: var(--fluoro); }
+
+/* --- Cositas --- */
+/*.pausebox{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  z-index:15; width: min(360px, 80vw);
+}*/
+.pause-title{
+  font-family:'Oswald', sans-serif; font-weight:700;
+  font-size: clamp(34px, 6vw, 56px);
+  letter-spacing:0.3em; color: var(--fluoro);
+  text-shadow: 0 0 18px rgba(246,241,207,0.35);
+  margin: 0 0 30px 0; line-height:1;
+  animation: flicker 4.5s infinite;
+}
+@keyframes flicker{
+  0%,84%,88%,100%{ opacity:1; }
+  85%{ opacity:0.3; }
+  86%{ opacity:0.9; }
+  87%{ opacity:0.5; }
+}
+
+.panel{
+  border: 2px solid var(--wall-dark);
+  background: rgba(20,18,11,0.7);
+  backdrop-filter: blur(1px);
+}
+.panel .btn-menu{
+  all:unset; cursor:pointer;
+  font-family:'Oswald', sans-serif; font-weight:500;
+  font-size:17px; letter-spacing:0.14em; color: var(--fluoro-dim);
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(110,100,56,0.6);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.panel .btn-menu:last-child{ border-bottom:none; }
+.panel .btn-menu span.tag{ font-family:'IBM Plex Mono', monospace; font-size:10px; opacity:0.6; }
+.panel .btn-menu:hover{ color: var(--fluoro); background: rgba(246,241,207,0.08); }
+.panel .btn-menu.primary{ color: var(--exit-glow); }
+.panel .btn-menu.primary:hover{ color:#7fb872; background: rgba(92,138,82,0.12); }
+.panel .btn-menu.warn{ color: var(--danger); }
+.panel .btn-menu.warn:hover{ color:#c97452; background: rgba(168,91,60,0.12); }
+
+/* Integración del mismo menú como superposición dentro de laberinto.html */
+#pausa {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(10, 9, 5, 0.72);
+}
+#pausa .pausebox {
+  position: relative;
+  width: min(450px, 84vw);
+  margin: 0 auto;
+  text-align: center;
+}
+#pausa .pause-title {
+  display: block;
+  width: 100%;
+  margin: 0 0 30px;
+  padding: 0;
+  text-align: center;
+  line-height: 1;
+}
+#pausa .panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+#pausa .panel .btn-menu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 89%;
+  min-height: 30px;
+  padding: 14px 24px;
+  text-align: left;
+  gap: 16px;
+  cursor: pointer;
+}
+#pausa .panel .btn-menu .tag {
+  flex: 0 0 auto;
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+}
+

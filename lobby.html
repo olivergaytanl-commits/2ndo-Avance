@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ONE WAY OUT — Sala de Espera</title>
+
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Fuentes -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link href="lobby-styles.css" rel="stylesheet">
+<style>
+  /* ───── Vista 1: crear / unirse (centrada bajo el título) ───── */
+  #vistaInicio {
+    position:absolute; top:100px; left:50%; transform:translateX(-50%);
+    width:min(420px, 90vw); max-height:calc(100vh - 120px); overflow-y:auto;
+    z-index:10; display:flex; flex-direction:column; gap:14px;
+  }
+
+  /* ───── Vista 2: selects de modo y dificultad entre el código y la lista ───── */
+  .config-sala {
+    position:absolute; top:178px; left:50%; transform:translateX(-50%);
+    width:min(560px, 90vw); z-index:10;
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;
+  }
+  #vistaSala .layout { top:250px; }
+  #vistaSala .flavor { bottom:58px; }
+
+  /* ───── Estilo común de labels, selects e input ───── */
+  #vistaInicio label, .config-sala label {
+    display:block; margin-bottom:4px;
+    font:10px 'IBM Plex Mono',monospace; letter-spacing:.15em; color:var(--fluoro-dim);
+  }
+  #vistaInicio select, #vistaInicio input, .config-sala select {
+    width:100%; padding:10px 12px; border-radius:0; outline:none;
+    background:rgba(20,18,11,.85); color:var(--fluoro);
+    border:2px solid var(--wall-dark);
+    font:13px 'IBM Plex Mono',monospace; letter-spacing:.08em; text-transform:uppercase;
+  }
+  #vistaInicio select:focus, #vistaInicio input:focus, .config-sala select:focus { border-color:var(--fluoro-dim); }
+  .config-sala select:disabled { opacity:.55; cursor:not-allowed; }
+
+  /* ───── Botones de la vista 1 (mismo look que los del pie) ───── */
+  #vistaInicio button {
+    all:unset; box-sizing:border-box; text-align:center; cursor:pointer;
+    font-family:'Oswald',sans-serif; font-weight:500; letter-spacing:.14em; font-size:14px;
+    padding:12px 0; color:var(--fluoro-dim); border:2px solid var(--wall-dark);
+    background:rgba(20,18,11,.55);
+  }
+  #vistaInicio button:hover { color:var(--fluoro); background:rgba(246,241,207,.06); }
+  #vistaInicio button.primary { color:var(--exit-glow); }
+  #vistaInicio button.primary:hover { color:#7fb872; background:rgba(92,138,82,.1); }
+  #vistaInicio button.warn { color:var(--danger); }
+  #vistaInicio button.warn:hover { color:#c97452; background:rgba(168,91,60,.1); }
+
+  .separador { text-align:center; font:10px 'IBM Plex Mono',monospace; color:var(--wall-dark); letter-spacing:.3em; }
+
+  /* ───── Mensajes de error ───── */
+  #msg {
+    position:absolute; bottom:70px; left:50%; transform:translateX(-50%);
+    z-index:25; text-align:center; white-space:nowrap;
+    font:12px 'IBM Plex Mono',monospace; letter-spacing:.06em; color:#c97452;
+  }
+
+  .oculto { display:none !important; }
+  .footer-actions button:disabled { opacity:.35; cursor:not-allowed; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="stain" style="width:220px;height:120px;top:72%;left:6%;"></div>
+  <div class="stain" style="width:170px;height:170px;top:6%;right:6%;"></div>
+
+  <div class="header text-center"><h1>SALA DE ESPERA</h1></div>
+
+  <!-- ───── VISTA 1: crear o unirse ───── -->
+  <div id="vistaInicio">
+    <div>
+      <label for="selModoCrear">MODO DE JUEGO</label>
+      <select id="selModoCrear">
+        <option value="carrera">1 VS 1 · 3 LLAVES · 1 ENTIDAD</option>
+        <option value="coop">COOPERATIVO · 3 LLAVES · 2 ENTIDADES</option>
+      </select>
+    </div>
+    <div>
+      <label for="selDificultadCrear">DIFICULTAD</label>
+      <select id="selDificultadCrear">
+        <option value="normal">NORMAL</option>
+        <option value="dificil">DIFÍCIL (NIEBLA)</option>
+      </select>
+    </div>
+    <div>
+      <label for="selMapaCrear">MAPA</label>
+      <select id="selMapaCrear">
+        <option value="oficinas">OFICINAS</option>
+        <option value="poolrooms">POOLROOMS</option>
+        <option value="fiesta">FIESTA</option>
+      </select>
+    </div>
+    <button id="btnCrear" class="primary">CREAR SALA</button>
+
+    <div class="separador">— O —</div>
+    <div>
+      <label for="inputCodigo">CÓDIGO DE SALA</label>
+      <input id="inputCodigo" maxlength="4" placeholder="ABCD" autocomplete="off">
+    </div>
+    <button id="btnUnirse" class="primary">UNIRSE A SALA</button>
+    <button class="warn" onclick="window.location.href='index.html'">VOLVER</button>
+  </div>
+
+  <!-- ───── VISTA 2: ya dentro de una sala ───── -->
+  <div id="vistaSala" class="oculto">
+    <div class="room-code text-center">
+      <div class="label">CÓDIGO DE SALA</div>
+      <div class="code" id="codigoSala">----</div>
+    </div>
+
+    <div class="config-sala">
+      <div>
+        <label for="selModo">MODO DE JUEGO</label>
+        <select id="selModo">
+          <option value="carrera">1 VS 1 · 3 LLAVES</option>
+          <option value="coop">COOP · 7 LLAVES</option>
+        </select>
+      </div>
+      <div>
+        <label for="selDificultad">DIFICULTAD</label>
+        <select id="selDificultad">
+          <option value="normal">NORMAL</option>
+          <option value="dificil">DIFÍCIL (NIEBLA)</option>
+        </select>
+      </div>
+      <div>
+      <label for="selMapa">MAPA</label>
+      <select id="selMapa">
+       <option value="oficinas">OFICINAS</option>
+        <option value="poolrooms">POOLROOMS</option>
+        <option value="fiesta">FIESTA</option>
+      </select>
+    </div>
+    </div>
+
+    <div class="layout d-flex flex-column">
+      <div class="list-head"><span>JUGADOR</span><span>ESTADO</span></div>
+      <div class="players" id="players"></div>
+    </div>
+
+    <div class="footer-actions d-flex">
+      <button class="warn" id="btnSalir">SALIR DE LA SALA</button>
+      <button class="primary" id="btnIniciar">INICIAR PARTIDA</button>
+    </div>
+
+    <div class="flavor" id="flavor"></div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="vignette"></div>
+  <div class="grain"></div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="lobby-script.js"></script>
+</body>
+</html>

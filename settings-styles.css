@@ -1,0 +1,130 @@
+:root{
+  --wall-a: #b6a968; --wall-b: #978a4c; --wall-dark: #6e6438;
+  --shadow: #14120b; --fluoro: #f6f1cf; --fluoro-dim: #cabf85;
+  --exit-glow: #5c8a52; --exit-glow-dim: #3c5c37;
+  --danger: #a85b3c; --stain:#4d4526;
+}
+*{ box-sizing:border-box; }
+html,body{
+  margin:0; padding:0; width:100%; height:100%; overflow:hidden;
+  font-family:'IBM Plex Mono', monospace; background:var(--shadow);
+}
+
+.screen{
+  position:relative; width:100%; height:100vh; overflow:hidden;
+  background: radial-gradient(ellipse at 50% 20%, var(--wall-a) 0%, var(--wall-b) 45%, var(--shadow) 100%);
+}
+
+.stain{
+  position:absolute; border-radius:50%;
+  background: radial-gradient(circle, var(--stain) 0%, transparent 70%); opacity:0.3;
+}
+
+.grain{
+  position:absolute; inset:0; z-index:20; pointer-events:none;
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 3px);
+  mix-blend-mode: multiply; opacity:0.5;
+}
+.vignette{
+  position:absolute; inset:0; z-index:19; pointer-events:none;
+  box-shadow: inset 0 0 220px 100px rgba(0,0,0,0.7);
+}
+
+.header{
+  position:absolute; top:34px; left:50%; transform:translateX(-50%);
+  z-index:10;
+}
+.header h1{
+  font-family:'Oswald', sans-serif; font-weight:700; letter-spacing:0.3em;
+  font-size: clamp(26px, 4vw, 38px); color: var(--fluoro);
+  text-shadow: 0 0 16px rgba(246,241,207,0.35); margin:0;
+  animation: flicker 4.5s infinite;
+}
+@keyframes flicker{
+  0%,84%,88%,100%{ opacity:1; }
+  85%{ opacity:0.3; }
+  86%{ opacity:0.9; }
+  87%{ opacity:0.5; }
+}
+
+.layout{
+  position:absolute; top:120px; bottom:70px; left:50%; transform:translateX(-50%);
+  width: min(620px, 88vw); z-index:10;
+  border: 2px solid var(--wall-dark);
+  background: rgba(20,18,11,0.55);
+  overflow:hidden;
+}
+
+.tabs{
+  border-bottom: 2px solid var(--wall-dark);
+}
+.tab{
+  flex:1; text-align:center; padding: 12px 0;
+  font-family:'Oswald', sans-serif; font-weight:500; letter-spacing:0.14em;
+  font-size:13px; color: var(--fluoro-dim); cursor:pointer;
+  border-right: 1px solid rgba(110,100,56,0.5);
+}
+.tab:last-child{ border-right:none; }
+.tab.active{ color: var(--fluoro); background: rgba(246,241,207,0.06); }
+
+.content{ padding: 26px 30px; overflow-y:auto; }
+
+.setting-row{
+  padding: 14px 0; border-bottom: 1px solid rgba(110,100,56,0.4);
+}
+.setting-row:last-child{ border-bottom:none; }
+.row-label{ color: var(--fluoro-dim); font-size:13px; letter-spacing:0.06em; }
+
+/* Pa las barritas */
+.slider{
+  -webkit-appearance:none; appearance:none;
+  width: 180px; height: 4px; background: var(--wall-dark);
+  outline:none;
+}
+.slider::-webkit-slider-thumb{
+  -webkit-appearance:none; width:14px; height:18px;
+  background: var(--fluoro-dim); cursor:pointer; border:1px solid var(--shadow);
+}
+
+/* Es el botón prende apaga */
+.toggle{
+  width:46px; height:22px; border:1px solid var(--fluoro-dim);
+  position:relative; cursor:pointer;
+}
+.toggle .knob{
+  position:absolute; top:1px; left:1px; width:18px; height:18px;
+  background: var(--fluoro-dim);
+  transition: left 0.15s ease;
+}
+.toggle.on .knob{ left: 25px; background: var(--exit-glow); }
+.toggle.on{ border-color: var(--exit-glow); }
+
+/* Un select de chill */
+.select-value{
+  gap:14px;
+  color: var(--fluoro); font-size:13px; letter-spacing:0.08em;
+}
+.select-value .arrow{
+  cursor:pointer; color: var(--fluoro-dim); font-size:14px;
+  padding: 2px 8px; border:1px solid var(--wall-dark);
+}
+
+.footer-actions{
+  position:absolute; bottom:0; left:0; right:0;
+  border-top: 2px solid var(--wall-dark);
+}
+.footer-actions button{
+  all:unset; flex:1; text-align:center; cursor:pointer;
+  font-family:'Oswald', sans-serif; font-weight:500; letter-spacing:0.14em;
+  font-size:14px; padding:14px 0; color: var(--fluoro-dim);
+  border-right:1px solid rgba(110,100,56,0.5);
+}
+.footer-actions button:last-child{ border-right:none; }
+.footer-actions button:hover{ color: var(--fluoro); background: rgba(246,241,207,0.06); }
+.footer-actions button.primary{ color: var(--exit-glow); }
+.footer-actions button.primary:hover{ color:#7fb872; background: rgba(92,138,82,0.1); }
+
+.back{
+  position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
+  z-index:10; color: var(--wall-dark); font-size:10px; letter-spacing:0.1em;
+}

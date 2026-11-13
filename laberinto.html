@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laberinto</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="pause-styles.css" rel="stylesheet">
+  <style>
+    :root {
+      --wall-a:#b6a968; --wall-b:#978a4c; --wall-dark:#6e6438;
+      --shadow:#14120b; --fluoro:#f6f1cf; --fluoro-dim:#cabf85;
+      --exit-glow:#5c8a52; --danger:#a85b3c; --stain:#4d4526;
+    }
+    * { box-sizing:border-box; }
+    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; font-family:'IBM Plex Mono',monospace; }
+    canvas { display:block; }
+    #inicio {
+      position:fixed; inset:0; z-index:40; display:flex; align-items:center; justify-content:center;
+      flex-direction:column; gap:12px; background:rgba(10,9,5,.78); color:var(--fluoro-dim);
+      font-family:'IBM Plex Mono',monospace; font-size:15px; text-align:center; cursor:pointer;
+    }
+    #inicio .logo { font-family:'Oswald',sans-serif; font-size:clamp(38px,6vw,64px); font-weight:700; letter-spacing:.2em; color:var(--fluoro); }
+    #inicio small { font-size:11px; letter-spacing:.06em; opacity:.8; }
+    #hudJuego { position:fixed; inset:0; z-index:10; pointer-events:none; color:var(--fluoro-dim); font:11px 'IBM Plex Mono',monospace; letter-spacing:.06em; line-height:1.7; text-shadow:0 1px 2px rgba(0,0,0,.8); }
+    #hudJuego .estado { position:absolute; top:22px; left:26px; }
+    #hudJuego b { color:var(--fluoro); }
+    #hudJuego .objetivo { position:absolute; bottom:26px; right:26px; text-align:right; color:var(--fluoro); font-size:12px; }
+    #hudJuego .rival { position:absolute; top:22px; right:26px; text-align:right; }
+    #hudJuego .bateria { position:absolute; bottom:26px; left:26px; display:flex; align-items:center; gap:10px; }
+    #hudJuego .barra { width:140px; height:10px; border:1px solid var(--fluoro-dim); position:relative; }
+    #hudJuego .relleno { position:absolute; inset:1px; width:58%; background:var(--fluoro-dim); }
+    #hudJuego .reticula { position:absolute; top:50%; left:50%; width:4px; height:4px; background:rgba(246,241,207,.8); border-radius:50%; transform:translate(-50%,-50%); }
+    #hudJuego .peligro { position:absolute; bottom:60px; right:26px; text-align:right; color:#e0663f; font-size:12px; letter-spacing:.1em; }
+  </style>
+  <div id="golpe" style="position:fixed; inset:0; z-index:30; pointer-events:none; background:rgba(120,0,0,.65); opacity:0;"></div>
+  <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@v0.155.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.155.0/examples/jsm/"
+    }
+  }
+</script>
+</head>
+
+<body>
+  <div id="inicio">
+    <div class="logo">ONE WAY OUT</div>
+    <div>HAZ CLIC PARA COMENZAR</div>
+    <small>WASD: MOVERSE · MOUSE: MIRAR · ESC: PAUSA</small>
+    <small>V: CAMBIAR ENTRE PRIMERA Y TERCERA PERSONA</small>
+    <small id="estadoModelo"></small>
+  </div>
+  <div id="hudJuego">
+    <div class="reticula"></div>
+    <div class="estado">Modo: <b id="modoJuego">-</b></div>
+    <div class="objetivo" id="objetivoTexto"></div>
+    <div class="peligro" id="peligro"></div>
+  </div>
+  <div id="pausa">
+    <div class="pausebox text-center">
+      <h1 class="pause-title">PAUSA</h1>
+      <div class="panel d-flex flex-column">
+        <button id="reanudar" class="btn-menu primary d-flex justify-content-between align-items-center">REANUDAR <span class="tag">ESC</span></button>
+        <button id="abandonar" class="btn-menu warn d-flex justify-content-between align-items-center">ABANDONAR PARTIDA <span class="tag">SALIR AL MENÚ</span></button>
+      </div>
+    </div>
+  </div>
+  <div id="fin" style="display:none; position:fixed; inset:0; z-index:60; background:rgba(10,9,5,.88); color:#cabf85; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center;">
+  <div id="finTitulo" style="font-family:'Oswald',sans-serif; font-size:clamp(38px,6vw,64px); font-weight:700; letter-spacing:.2em; color:#f6f1cf;"></div>
+  <div id="finTexto" style="font-size:13px; letter-spacing:.08em;"></div>
+  <button id="finVolver" style="all:unset; cursor:pointer; padding:12px 28px; border:2px solid #6e6438; color:#5c8a52; font-family:'Oswald',sans-serif; letter-spacing:.14em; font-size:16px;">VOLVER AL LOBBY</button>
+</div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <!-- Socket.io -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <script type="module">
+
+    import * as THREE from 'three';
+    import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+    import { cargarPersonaje } from '/js/personaje.js'; 
+    import { crearEntidad } from '/js/entidad.js';  // tu modelo .glb con animaciones Idle / Walk / Run
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Luces
+    const ambientLight = new THREE.AmbientLight(0xfff2c0, 0.6);
+    scene.add(ambientLight);
+
+    // Luz que acompaña al jugador (como una linterna)
+    const pl = new THREE.PointLight(0xfff0c0, 4, 12);
+    scene.add(pl);
+    
+    const TEMAS = {
+    oficinas:  { ambiente: 0xfff2c0, intensidad: 0.6,  luz: 0xfff0c0, niebla: '#14120b' },
+    poolrooms: { ambiente: 0xbfeeff, intensidad: 0.8,  luz: 0xe0ffff, niebla: '#1c3d46' },
+    fiesta:    { ambiente: 0xffd6f0, intensidad: 0.75, luz: 0xfff0f8, niebla: '#2a1530' },
+};
+const datosMapa = await (await fetch('/api/mapa?token=' + encodeURIComponent(sessionStorage.getItem('idJugador') || ''))).json();
+const mapa = datosMapa.matriz;
+const TEMA = datosMapa.tema;
+const tema = TEMAS[TEMA] || TEMAS.oficinas;
+ambientLight.color.set(tema.ambiente);
+ambientLight.intensity = tema.intensidad;
+pl.color.set(tema.luz);
+
+    const inicioFila = 1, inicioCol = 1;   // casilla donde empieza el jugador
+
+    const TAM = 2;   // lado de cada casilla
+    const ALTO = 4.5;  // altura de las paredes
+
+    // ───── PASO 3: textura de papel tapiz amarillo (dibujada con código) ─────
+    function crearTexturaTapizOficinas() {
+      const N = 512;
+      const lienzo = document.createElement('canvas');
+      lienzo.width = lienzo.height = N;
+      const g = lienzo.getContext('2d');
+
+      // 1) Color base amarillo sucio
+      g.fillStyle = '#a28d2c';
+      g.fillRect(0, 0, N, N);
+
+      // 2) Manchas suaves de humedad: círculos con degradado que se desvanece.
+      //    Se dibujan también desplazados ±N para que, si se salen por un borde,
+      //    reaparezcan por el lado contrario y la textura siga repitiéndose sin costura.
+      for (let i = 0; i < 14; i++) {
+        const x = Math.random() * N, y = Math.random() * N;
+        const radio = 40 + Math.random() * 70;
+        const fuerza = 0.05 + Math.random() * 0.08;
+        for (const ox of [-N, 0, N]) {
+          for (const oy of [-N, 0, N]) {
+            const grad = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, radio);
+            grad.addColorStop(0, `rgba(70, 55, 10, ${fuerza})`);
+            grad.addColorStop(1, 'rgba(70, 55, 10, 0)');
+            g.fillStyle = grad;
+            g.fillRect(x + ox - radio, y + oy - radio, radio * 2, radio * 2);
+          }
+        }
+      }
+
+      // 3) Rayas verticales oscuras cada 64 px (512 / 64 = 8 rayas, encaja justo para repetirse)
+      for (let x = 0; x < N; x += 64) {
+        const grad = g.createLinearGradient(x, 0, x + 14, 0);
+        grad.addColorStop(0, 'rgba(70, 55, 10, 0)');
+        grad.addColorStop(0.4, 'rgba(70, 55, 10, 0.35)');
+        grad.addColorStop(1, 'rgba(70, 55, 10, 0)');
+        g.fillStyle = grad;
+        g.fillRect(x, 0, 14, N);
+      }
+
+      // 4) Ruido de grano para que no se vea plano
+      const img = g.getImageData(0, 0, N, N);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const r = (Math.random() - 0.5) * 18;
+        img.data[i] += r; img.data[i + 1] += r; img.data[i + 2] += r;
+      }
+      g.putImageData(img, 0, 0);
+
+      const textura = new THREE.CanvasTexture(lienzo);
+      textura.colorSpace = THREE.SRGBColorSpace;
+      textura.anisotropy = 8;   // se ve mejor al mirar la pared de lado
+      return textura;
+    }
+
+    // ───── Textura del techo: plafón verde olivo con lámparas fluorescentes ─────
+    // anchoMundo / altoMundo = tamaño del techo en unidades de la escena.
+    // Devuelve dos imágenes: el color (map) y qué zonas brillan (emissiveMap = los tubos).
+    function crearTexturaTechoOficinas(anchoMundo, altoMundo) {
+      const TILE = 1.1;      // lado de cada cuadro de plafón (los pasillos miden 2: no coinciden)
+      const PPU = 24;        // píxeles de imagen por unidad de la escena
+      const LUCES = true;    // false = techo sin lámparas
+      const SEP_LUCES = 6;   // cada cuántas unidades hay una lámpara
+
+      const color = document.createElement('canvas');
+      const brillo = document.createElement('canvas');
+      color.width = brillo.width = Math.round(anchoMundo * PPU);
+      color.height = brillo.height = Math.round(altoMundo * PPU);
+      const g = color.getContext('2d');
+      const b = brillo.getContext('2d');
+
+      const t = TILE * PPU;
+      const nx = Math.ceil(color.width / t);
+      const ny = Math.ceil(color.height / t);
+
+      //Pa los colores
+      g.fillStyle = '#868a56';                      // verde olivo
+      g.fillRect(0, 0, color.width, color.height);
+      b.fillStyle = '#000';                         // negro = no brilla
+      b.fillRect(0, 0, brillo.width, brillo.height);
+
+      // Grano fino
+      const img = g.getImageData(0, 0, color.width, color.height);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const r = (Math.random() - 0.5) * 12;
+        img.data[i] += r; img.data[i + 1] += r; img.data[i + 2] += r;
+      }
+      g.putImageData(img, 0, 0);
+
+      // Pa que los cuadrados se vean un poco distintos
+      for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) {
+          g.fillStyle = `rgba(30, 35, 10, ${Math.random() * 0.1})`;
+          g.fillRect(i * t, j * t, t, t);
+        }
+      }
+
+      // Pa las manchitas de mugre
+      for (let k = 0; k < nx * ny * 0.6; k++) {
+        const x = Math.random() * color.width, y = Math.random() * color.height;
+        const r = t * (0.3 + Math.random() * 0.8);
+        const grad = g.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, `rgba(35, 38, 10, ${0.06 + Math.random() * 0.12})`);
+        grad.addColorStop(1, 'rgba(35, 38, 10, 0)');
+        g.fillStyle = grad;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+
+      // Estos son los bordes
+      g.fillStyle = 'rgba(30, 33, 10, 0.3)';
+      for (let i = 0; i <= nx; i++) g.fillRect(i * t - 0.5, 0, 1.5, color.height);
+      for (let j = 0; j <= ny; j++) g.fillRect(0, j * t - 0.5, color.width, 1.5);
+
+      // Para las lámparas del techo
+      if (LUCES) {
+        const w = 1.7 * PPU, h = 0.45 * PPU;           // largo y ancho
+        const zMax = altoMundo - TAM / 2;               // el techo está "al revés" en z
+        for (let x = 2; x < anchoMundo - 1; x += SEP_LUCES) {
+          for (let z = 2; z < altoMundo - 1; z += SEP_LUCES) {
+            const px = (x + TAM / 2) * PPU - w / 2;     // (+TAM/2 porque el techo empieza en x = -TAM/2)
+            const py = (zMax - z) * PPU - h / 2;
+            g.fillStyle = '#16180d';  g.fillRect(px - 3, py - 3, w + 6, h + 6);   // marco
+            g.fillStyle = '#3a3d28';  g.fillRect(px, py, w, h);                    // fondo interno
+            for (const f of [0.22, 0.58]) {                                        // dos tubos
+              g.fillStyle = '#f4f7e2'; g.fillRect(px + 4, py + h * f, w - 8, h * 0.2);
+              b.fillStyle = '#e8f0c8'; b.fillRect(px + 4, py + h * f, w - 8, h * 0.2);
+            }
+          }
+        }
+      }
+
+      const mapaColor = new THREE.CanvasTexture(color);
+      const mapaBrillo = new THREE.CanvasTexture(brillo);
+      mapaColor.colorSpace = mapaBrillo.colorSpace = THREE.SRGBColorSpace;
+      mapaColor.anisotropy = mapaBrillo.anisotropy = 8;
+      return { mapaColor, mapaBrillo };
+    }
+
+    // ───── Textura del piso ─────
+    function crearTexturaPisoOficinas(anchoMundo, altoMundo) {
+      const PPU = 48;
+      const lienzo = document.createElement('canvas');
+      lienzo.width = Math.round(anchoMundo * PPU);
+      lienzo.height = Math.round(altoMundo * PPU);
+      const g = lienzo.getContext('2d');
+
+      g.fillStyle = '#6c7040';                       // verde grisáceo
+      g.fillRect(0, 0, lienzo.width, lienzo.height);
+
+      // Pal desgaste de la alfombra
+      for (let k = 0; k < anchoMundo * altoMundo / 6; k++) {
+        const x = Math.random() * lienzo.width, y = Math.random() * lienzo.height;
+        const r = 60 + Math.random() * 160;
+        const claro = Math.random() < 0.5;
+        const grad = g.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, claro ? 'rgba(150, 155, 90, 0.10)' : 'rgba(30, 35, 10, 0.12)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        g.fillStyle = grad;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+
+      // Motivo diminuto de la alfombra: puntitos en cuadrícula, con las filas desfasadas
+      const paso = 7;
+      for (let y = 0; y < lienzo.height; y += paso) {
+        const desfase = (Math.floor(y / paso) % 2) * (paso / 2);
+        for (let x = 0; x < lienzo.width; x += paso) {
+          g.fillStyle = 'rgba(95, 70, 40, 0.28)';   // puntito rojizo apagado
+          g.fillRect(x + desfase, y, 1.5, 1.5);
+        }
+      }
+
+      // Fibras
+      const img = g.getImageData(0, 0, lienzo.width, lienzo.height);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const r = (Math.random() - 0.5) * 34;
+        img.data[i] += r; img.data[i + 1] += r; img.data[i + 2] += r * 0.8;
+      }
+      g.putImageData(img, 0, 0);
+
+      // Algunas manchas oscuras
+      for (let k = 0; k < anchoMundo * altoMundo / 14; k++) {
+        const x = Math.random() * lienzo.width, y = Math.random() * lienzo.height;
+        const r = 10 + Math.random() * 30;
+        const grad = g.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, `rgba(25, 25, 5, ${0.08 + Math.random() * 0.15})`);
+        grad.addColorStop(1, 'rgba(25, 25, 5, 0)');
+        g.fillStyle = grad;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+
+      const textura = new THREE.CanvasTexture(lienzo);
+      textura.colorSpace = THREE.SRGBColorSpace;
+      textura.anisotropy = 8;
+      return textura;
+    }
+
+    // ───── Texturas de los otros temas ─────
+const nuevoLienzo = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+const aTextura = (lienzo) => {
+  const t = new THREE.CanvasTexture(lienzo);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+};
+function grano(g, w, h, fuerza) {
+  const img = g.getImageData(0, 0, w, h);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const r = (Math.random() - 0.5) * fuerza;
+    img.data[i] += r; img.data[i + 1] += r; img.data[i + 2] += r;
+  }
+  g.putImageData(img, 0, 0);
+}
+const COLORES_FIESTA = ['#ff5fa2', '#ffd23f', '#3fc1ff', '#7be06a', '#b66bff', '#ff8c3a'];
+function confeti(g, w, h, cantidad, tam) {
+  for (let i = 0; i < cantidad; i++) {
+    g.fillStyle = COLORES_FIESTA[Math.floor(Math.random() * COLORES_FIESTA.length)];
+    const x = Math.random() * w, y = Math.random() * h;
+    if (Math.random() < 0.5) {
+      g.beginPath(); g.arc(x, y, tam * (0.5 + Math.random()), 0, Math.PI * 2); g.fill();
+    } else {
+      g.save(); g.translate(x, y); g.rotate(Math.random() * Math.PI);
+      g.fillRect(-tam, -tam / 3, tam * 2, tam * 0.66); g.restore();
+    }
+  }
+}
+
+// ── Poolrooms: azulejos blancos y celestes ──
+function paredPool() {
+  const N = 512, T = 64, c = nuevoLienzo(N, N), g = c.getContext('2d');
+  for (let y = 0; y < N; y += T) for (let x = 0; x < N; x += T) {
+    g.fillStyle = `hsl(180, 40%, ${82 + Math.random() * 7}%)`;
+    g.fillRect(x, y, T, T);
+  }
+  g.fillStyle = 'rgba(70, 130, 140, 0.6)';                       // juntas
+  for (let p = 0; p < N; p += T) { g.fillRect(p, 0, 3, N); g.fillRect(0, p, N, 3); }
+  g.fillStyle = 'rgba(40, 110, 140, 0.5)';                       // franja azul cerca del piso
+  g.fillRect(0, N - T * 1.5, N, T / 2);
+  for (let i = 0; i < 10; i++) {                                  // humedad
+    const x = Math.random() * N, y = Math.random() * N, r = 40 + Math.random() * 60;
+    const grad = g.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, 'rgba(40, 110, 120, 0.12)'); grad.addColorStop(1, 'rgba(40, 110, 120, 0)');
+    g.fillStyle = grad; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  grano(g, N, N, 14);
+  return aTextura(c);
+}
+
+function pisoPool(ancho, alto) {
+  const PPU = 24, T = 24;
+  const c = nuevoLienzo(Math.round(ancho * PPU), Math.round(alto * PPU)), g = c.getContext('2d');
+  for (let y = 0; y < c.height; y += T) for (let x = 0; x < c.width; x += T) {
+    g.fillStyle = `hsl(188, 55%, ${58 + Math.random() * 8}%)`;
+    g.fillRect(x, y, T, T);
+  }
+  g.fillStyle = 'rgba(235, 255, 255, 0.55)';
+  for (let x = 0; x < c.width; x += T) g.fillRect(x, 0, 2, c.height);
+  for (let y = 0; y < c.height; y += T) g.fillRect(0, y, c.width, 2);
+  for (let k = 0; k < ancho * alto / 10; k++) {                   // reflejos del agua
+    const x = Math.random() * c.width, y = Math.random() * c.height, r = 20 + Math.random() * 40;
+    const grad = g.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 0.14)'); grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    g.fillStyle = grad; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  grano(g, c.width, c.height, 14);
+  return aTextura(c);
+}
+
+// ── Fiesta de cumpleaños: rayas, lunares, guirnaldas y confeti ──
+function paredFiesta() {
+  const N = 512, c = nuevoLienzo(N, N), g = c.getContext('2d');
+  const franjas = ['#ff9ec4', '#fff0a8'];
+  for (let x = 0; x < N; x += 64) { g.fillStyle = franjas[(x / 64) % 2]; g.fillRect(x, 0, 64, N); }
+  g.fillStyle = 'rgba(255, 255, 255, 0.8)';                       // lunares
+  for (let y = 100; y < N; y += 64) for (let x = 32; x < N; x += 64) { g.beginPath(); g.arc(x, y, 8, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = '#4a3a2a'; g.fillRect(0, 18, N, 4);               // guirnalda de banderines
+  for (let x = 0; x < N; x += 64) {
+    g.fillStyle = COLORES_FIESTA[(x / 64) % COLORES_FIESTA.length];
+    g.beginPath(); g.moveTo(x + 4, 22); g.lineTo(x + 60, 22); g.lineTo(x + 32, 72); g.closePath(); g.fill();
+  }
+  confeti(g, N, N, 40, 5);
+  grano(g, N, N, 12);
+  return aTextura(c);
+}
+
+function pisoFiesta(ancho, alto) {
+  const PPU = 24, T = 24;
+  const c = nuevoLienzo(Math.round(ancho * PPU), Math.round(alto * PPU)), g = c.getContext('2d');
+  for (let y = 0; y < c.height; y += T) for (let x = 0; x < c.width; x += T) {
+    g.fillStyle = ((x + y) / T) % 2 === 0 ? '#fff4fb' : '#ffb6d5';   // tablero
+    g.fillRect(x, y, T, T);
+  }
+  confeti(g, c.width, c.height, Math.round(ancho * alto * 1.5), 3);
+  grano(g, c.width, c.height, 12);
+  return aTextura(c);
+}
+
+// ── Techo genérico para los dos temas nuevos ──
+function techoTema(ancho, alto, o) {
+  const PPU = 24, TILE = 1.1, w = Math.round(ancho * PPU), h = Math.round(alto * PPU);
+  const color = nuevoLienzo(w, h), brillo = nuevoLienzo(w, h);
+  const g = color.getContext('2d'), b = brillo.getContext('2d');
+  g.fillStyle = o.base; g.fillRect(0, 0, w, h);
+  b.fillStyle = '#000'; b.fillRect(0, 0, w, h);
+  grano(g, w, h, 10);
+
+  const ts = TILE * PPU, nx = Math.ceil(w / ts), ny = Math.ceil(h / ts);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    g.fillStyle = `rgba(${o.sombra}, ${Math.random() * 0.08})`; g.fillRect(i * ts, j * ts, ts, ts);
+  }
+  g.fillStyle = `rgba(${o.sombra}, 0.25)`;
+  for (let i = 0; i <= nx; i++) g.fillRect(i * ts - 0.5, 0, 1.5, h);
+  for (let j = 0; j <= ny; j++) g.fillRect(0, j * ts - 0.5, w, 1.5);
+  if (o.confeti) confeti(g, w, h, Math.round(ancho * alto / 2), 3);
+
+  const lw = 1.7 * PPU, lh = 0.45 * PPU, zMax = alto - TAM / 2;
+  for (let x = 2; x < ancho - 1; x += o.sep) for (let z = 2; z < alto - 1; z += o.sep) {
+    const px = (x + TAM / 2) * PPU - lw / 2, py = (zMax - z) * PPU - lh / 2;
+    g.fillStyle = '#2a2a2a'; g.fillRect(px - 3, py - 3, lw + 6, lh + 6);
+    g.fillStyle = '#555'; g.fillRect(px, py, lw, lh);
+    for (const f of [0.22, 0.58]) {
+      g.fillStyle = o.tubo; g.fillRect(px + 4, py + lh * f, lw - 8, lh * 0.2);
+      b.fillStyle = o.tubo; b.fillRect(px + 4, py + lh * f, lw - 8, lh * 0.2);
+    }
+  }
+  return { mapaColor: aTextura(color), mapaBrillo: aTextura(brillo) };
+}
+
+// ── Elegir según el tema del mapa ──
+const texturaPared = (t) => t === 'poolrooms' ? paredPool() : t === 'fiesta' ? paredFiesta() : crearTexturaTapizOficinas();
+const texturaPiso = (t, w, h) => t === 'poolrooms' ? pisoPool(w, h) : t === 'fiesta' ? pisoFiesta(w, h) : crearTexturaPisoOficinas(w, h);
+const texturaTecho = (t, w, h) =>
+  t === 'poolrooms' ? techoTema(w, h, { base: '#e9f4f3', sombra: '40,90,95', tubo: '#ffffff', sep: 6 })
+  : t === 'fiesta'  ? techoTema(w, h, { base: '#f7e4f1', sombra: '110,50,100', tubo: '#fff3b8', sep: 6, confeti: true })
+  : crearTexturaTechoOficinas(w, h);
+
+    // ───── Paredes delgadas ─────
+    const GROSOR = 0.4;   // grosor de las paredes
+    const matPared = new THREE.MeshPhongMaterial({ map: texturaPared(TEMA) });
+    const cajas = [];     // cada pared también se guarda aquí para las colisiones
+
+    // Crea una pared centrada en (cx, cz) de tamaño ancho (en x) por largo (en z)
+    function agregarPared(cx, cz, ancho, largo) {
+      const pared = new THREE.Mesh(new THREE.BoxGeometry(ancho, ALTO, largo), matPared);
+      pared.position.set(cx, ALTO / 2, cz);
+      scene.add(pared);
+      cajas.push({ x: cx, z: cz, mitadX: ancho / 2, mitadZ: largo / 2 });
+    }
+
+    for (let fila = 0; fila < mapa.length; fila++) {
+      for (let col = 0; col < mapa[fila].length; col++) {
+        if (mapa[fila][col] !== 1) continue;
+        const x = col * TAM, z = fila * TAM;
+
+        agregarPared(x, z, GROSOR, GROSOR);   // un poste en el centro de la casilla
+
+        // Si la casilla de la derecha / de abajo también es pared, se unen con un tramo
+        if (mapa[fila][col + 1] === 1) agregarPared(x + TAM / 2, z, TAM - GROSOR, GROSOR);
+        if (mapa[fila + 1] && mapa[fila + 1][col] === 1) agregarPared(x, z + TAM / 2, GROSOR, TAM - GROSOR);
+      }
+    }
+
+    // ───── Piso ─────
+    const filas = mapa.length;
+    const cols = mapa[0].length;
+    const piso = new THREE.Mesh(
+      new THREE.PlaneGeometry(cols * TAM, filas * TAM),
+      new THREE.MeshPhongMaterial({ map: texturaPiso(TEMA, cols * TAM, filas * TAM), specular: 0x000000 })
+    );
+    piso.rotation.x = -Math.PI / 2;
+    piso.position.set((cols - 1) * TAM / 2, 0, (filas - 1) * TAM / 2);
+    scene.add(piso);
+
+    // ───── Techo ─────
+    const texTecho = texturaTecho(TEMA, cols * TAM, filas * TAM);
+    const techo = new THREE.Mesh(
+      new THREE.PlaneGeometry(cols * TAM, filas * TAM),
+      new THREE.MeshPhongMaterial({
+        map: texTecho.mapaColor,
+        emissive: 0xffffff,                // las lámparas brillan...
+        emissiveMap: texTecho.mapaBrillo,  // ...solo donde esta imagen no es negra
+        specular: 0x000000,
+      })
+    );
+    techo.rotation.x = Math.PI / 2;        // mirando hacia abajo
+    techo.position.set((cols - 1) * TAM / 2, ALTO, (filas - 1) * TAM / 2);
+    scene.add(techo);
+
+    // ───── Primera persona ─────
+    camera.position.set(inicioCol * TAM, 1.0, inicioFila * TAM);   // a la altura de los "ojos"
+
+    // Girar la cámara para que mire hacia un pasillo libre (y no hacia una pared)
+    const direcciones = [[0, -1, 0], [0, 1, Math.PI], [1, 0, -Math.PI / 2], [-1, 0, Math.PI / 2]]; // [dCol, dFila, giro]
+    for (const [dc, df, giro] of direcciones) {
+      if (mapa[inicioFila + df] && mapa[inicioFila + df][inicioCol + dc] === 0) {
+        camera.rotation.y = giro;
+        break;
+      }
+    }
+
+    const controls = new PointerLockControls(camera, renderer.domElement);
+    const pantallaInicio = document.getElementById('inicio');
+    const pantallaPausa = document.getElementById('pausa');
+    const botonReanudar = document.getElementById('reanudar');
+    let partidaIniciada = false;
+
+    pantallaInicio.addEventListener('click', () => { partidaIniciada = true; socket.emit('listo'); controls.lock(); });
+    botonReanudar.addEventListener('click', () => controls.lock());
+
+    // Al abandonar, el servidor te saca de la sala y avisa al otro jugador
+    document.getElementById('abandonar').addEventListener('click', () => {
+      socket.emit('salirSala', null, () => { window.location.href = 'lobby.html'; });
+    });
+
+    controls.addEventListener('lock', () => {
+      pantallaInicio.style.display = 'none';
+      pantallaPausa.style.display = 'none';
+    });
+    controls.addEventListener('unlock', () => {
+  if (terminada) return;
+  if (partidaIniciada) pantallaPausa.style.display = 'flex';
+  else pantallaInicio.style.display = 'flex';
+});
+
+    // Teclas
+    const teclas = {};
+    document.addEventListener('keydown', (e) => {
+      teclas[e.key.toLowerCase()] = true;
+      if (e.key === 'Escape' && partidaIniciada) {
+        // PointerLockControls libera el mouse y el evento unlock muestra la pausa.
+        teclas.w = teclas.a = teclas.s = teclas.d = false;
+      }
+    });
+    document.addEventListener('keyup', (e) => { teclas[e.key.toLowerCase()] = false; });
+
+    // ───── Colisiones ─────
+    const RADIO = 0.3;   // "grosor" del jugador
+
+    // ¿Esta posición toca alguna pared? Cada pared es un rectángulo (caja);
+    // el jugador choca si está más cerca de su centro que (mitad de la caja + RADIO) en x y en z.
+      function chocaConPared(x, z) {
+      for (const c of cajas) {
+        if (Math.abs(x - c.x) < c.mitadX + RADIO && Math.abs(z - c.z) < c.mitadZ + RADIO) return true;
+      }
+      for (const p of puertasMundo) {
+        if (p.abierta || !p.propia) continue;
+        const c = p.caja;
+        if (Math.abs(x - c.x) < c.mitadX + RADIO && Math.abs(z - c.z) < c.mitadZ + RADIO) return true;
+      }
+      return false;
+    }
+
+     // ───── Movimiento ─────
+    const VELOCIDAD = 4;
+    const adelante = new THREE.Vector3();
+    const reloj = new THREE.Clock();
+
+     // ───── Multijugador ─────
+   const socket = io();
+    const otros = {};   // id -> { mesh, destino, rotDestino, anim, modelo }
+    let token = sessionStorage.getItem('idJugador');
+    let config = null;  // modo, dificultad, llaves, entidades, entidad{...}, niebla
+    let llavesMundo = [];
+    let puertasMundo = [];
+    let miOrdenActual = 1;
+    let miColor = 'azul';
+    let tengoLlave = false;
+    let terminada = false;
+    const ordenColor = { azul: 1, rojo: 1 };
+    const geoOtro = new THREE.CapsuleGeometry(0.3, 0.6, 4, 8);
+
+    // El servidor nos dice el NOMBRE del personaje ('Bryce1', 'Martha1'); aquí se arma la ruta del .glb
+    const rutaModelo = (nombre) => '/modelos/' + nombre + '.glb';
+
+
+    function crearOtro(j) {
+      if (otros[j.id]) return;
+      const color = new THREE.Color().setHSL((parseInt(j.id.slice(0, 4), 36) % 360) / 360, 0.7, 0.5);
+      const mesh = new THREE.Mesh(geoOtro, new THREE.MeshPhongMaterial({ color }));
+      const nariz = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.3), new THREE.MeshPhongMaterial({ color: 0xffffff }));
+      nariz.position.set(0, 0.35, -0.3);
+      mesh.add(nariz);
+      mesh.position.set(j.x, 0.6, j.z);
+      mesh.rotation.y = j.rotY - Math.PI;   // rotY = hacia dónde mira el cuerpo (0 = +Z); el -PI es por el offset del modelo
+      scene.add(mesh);
+      const otro = { mesh, destino: new THREE.Vector3(j.x, 0.6, j.z), rotDestino: j.rotY, anim: j.anim || 'Idle', modelo: null };
+      otros[j.id] = otro;
+
+     // Su cuerpo es tu modelo .glb. Mientras carga (o si no se encuentra) se ve la cápsula de siempre.
+      cargarPersonaje(rutaModelo(j.personaje))
+        .then((p) => {
+          if (otros[j.id] !== otro) return;   // ese jugador ya se fue
+          p.raiz.position.y = -0.6;           // la cápsula está a 0.6 de altura; el modelo debe pisar el suelo
+          p.raiz.rotation.y = Math.PI;        // la cápsula mira hacia -Z y el modelo hacia +Z
+          mesh.add(p.raiz);
+          mesh.material.visible = false;      // se oculta la cápsula...
+          nariz.visible = false;              // ...y su nariz
+          otro.modelo = p;
+        })
+        .catch(() => { /* sin modelo: se queda la cápsula */ });
+    }
+
+    socket.on('connect', () => {
+      if (!token) { window.location.href = 'lobby.html'; return; }
+      socket.emit('identificar', token, () => {
+        if (config) return;   // reconexión: ya estábamos dentro
+        socket.emit('entrarJuego', null, (r) => {
+          if (r.error) { window.location.href = 'lobby.html'; return; }
+          arrancarPartida(r);
+        });
+      });
+    });
+
+    function crearMeshLlave(color) {
+      const hex = color === 'azul' ? 0x39a0ff : 0xff4a4a;
+      const mat = new THREE.MeshPhongMaterial({ color: hex, emissive: hex, emissiveIntensity: 0.6, shininess: 80 });
+      const llave = new THREE.Group();
+      const aro = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.045, 8, 16), mat);
+      const varilla = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.34, 0.06), mat);
+      varilla.position.y = -0.22;
+      const diente1 = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.06), mat);
+      diente1.position.set(0.07, -0.34, 0);
+      const diente2 = diente1.clone();
+      diente2.position.set(0.07, -0.24, 0);
+      llave.add(aro, varilla, diente1, diente2);
+      llave.scale.setScalar(1.8);
+
+      const haz = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.12, ALTO, 12, 1, true),
+        new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
+      );
+      haz.position.y = ALTO / 2;
+
+      const raiz = new THREE.Group();
+      raiz.add(llave, haz);
+      return { raiz, llave };
+    }
+
+    // Reja: barras verticales, travesaños del color del dueño y un candado
+    function crearReja(p) {
+      const largoPuerta = Math.max(p.ancho, p.largo);
+      const alto = ALTO - 0.05;
+      const azul = p.color === 'azul';
+      const matBarra = new THREE.MeshPhongMaterial({ color: 0x3a3a3a, specular: 0x999999, shininess: 90 });
+      const matTinte = new THREE.MeshPhongMaterial({ color: azul ? 0x2f6fc4 : 0xc03a2e, emissive: azul ? 0x0a2a55 : 0x4a0f0a });
+      const matCandado = new THREE.MeshPhongMaterial({ color: 0xd4af37, specular: 0xffffff, shininess: 100 });
+
+      const g = new THREE.Group();
+      const n = Math.round(largoPuerta / 0.25);   // una barra cada ~25 cm
+      for (let i = 0; i < n; i++) {
+        const x = -largoPuerta / 2 + 0.1 + i * ((largoPuerta - 0.2) / (n - 1));
+        const barra = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, alto, 8), matBarra);
+        barra.position.set(x, alto / 2, 0);
+        g.add(barra);
+      }
+      for (const y of [0.15, 1.3, 2.5, 3.7, alto - 0.1]) {
+        const t = new THREE.Mesh(new THREE.BoxGeometry(largoPuerta, 0.12, 0.12), matTinte);
+        t.position.set(0, y, 0);
+        g.add(t);
+      }
+      const candado = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.34, 0.16), matCandado);
+      candado.position.set(0, 1.3, 0.12);
+      g.add(candado);
+
+      g.position.set(p.x, 0, p.z);
+      if (p.largo > p.ancho) g.rotation.y = Math.PI / 2;   // reja a lo largo de z
+      return g;
+    }
+
+      function arrancarPartida({ id, personaje: miPersonaje, jugadores, config: cfg, llaves, puertas, miColor: color }) {
+      config = cfg;
+      miColor = color;
+      aplicarConfig();
+      cargarMiPersonaje(miPersonaje);
+
+      // Etapa de cada color = puertas abiertas + 1 (sirve también si recargas la página)
+      for (const c of ['azul', 'rojo']) ordenColor[c] = 1 + puertas.filter((p) => p.color === c && p.abierta).length;
+      miOrdenActual = ordenColor[miColor];
+
+      // Llaves de AMBOS colores: las ven los dos jugadores, pero solo recoges la tuya
+      llaves.forEach((l) => {
+        const { raiz, llave } = crearMeshLlave(l.color);
+        raiz.position.set(l.x, 0, l.z);
+        scene.add(raiz);
+        llavesMundo.push({ id: l.id, color: l.color, orden: l.orden, raiz, llave, x: l.x, z: l.z, recogida: l.recogida, enProceso: false });
+      });
+      tengoLlave = llavesMundo.some((l) => l.color === miColor && l.orden === miOrdenActual && l.recogida);
+
+      puertas.forEach((p) => {
+        const grupo = crearReja(p);
+        grupo.visible = !p.abierta;
+        scene.add(grupo);
+        puertasMundo.push({
+          id: p.id, color: p.color, orden: p.orden, grupo, x: p.x, z: p.z,
+          abierta: p.abierta, propia: p.color === miColor, subiendo: false, enProceso: false,
+          caja: { x: p.x, z: p.z, mitadX: p.ancho / 2, mitadZ: p.largo / 2 },
+        });
+      });
+
+      refrescarLlaves();
+      actualizarObjetivo();
+      for (const j of Object.values(jugadores)) if (j.id !== id) crearOtro(j);
+    }
+
+     // De cada color se ve solo la llave de su etapa actual
+    function refrescarLlaves() {
+      llavesMundo.forEach((l) => { l.raiz.visible = !l.recogida && l.orden === ordenColor[l.color]; });
+    }
+
+    function actualizarObjetivo() {
+      const n = Math.min(miOrdenActual, 3);
+      document.getElementById('objetivoTexto').innerHTML = tengoLlave
+        ? `LLAVE ${n}/3 EN TU PODER<br>ENCUENTRA TU PUERTA`
+        : `BUSCA LA LLAVE ${n}/3`;
+    }
+
+     socket.on('llaveRecogida', ({ id, color }) => {
+      const l = llavesMundo.find((k) => k.id === id);
+      if (l) l.recogida = true;
+      if (color === miColor) tengoLlave = true;
+      refrescarLlaves();
+      actualizarObjetivo();
+    });
+
+     socket.on('puertaAbierta', ({ id, color }) => {
+      const p = puertasMundo.find((d) => d.id === id);
+      if (p) { p.abierta = true; p.subiendo = true; }   // la reja sube y desaparece
+      ordenColor[color]++;
+      if (color === miColor) { miOrdenActual = ordenColor[color]; tengoLlave = false; }
+      refrescarLlaves();
+      actualizarObjetivo();
+    });
+
+    // ───── La Entidad (simulada en el servidor; renderizada aquí) ─────
+    const entidades = {};   // id -> { cont, destino, rotDestino, estado, vis }
+    const peligro = document.getElementById('peligro');
+    const golpe = document.getElementById('golpe');
+
+    function nuevaEntidad(e) {
+      const cont = new THREE.Group();
+      cont.position.set(e.x, 0, e.z);
+      const luz = new THREE.PointLight(0xff2a1a, 1.5, 9);
+      luz.position.y = 1.6;
+      cont.add(luz);
+      scene.add(cont);
+
+      const o = { cont, destino: new THREE.Vector3(e.x, 0, e.z), rotDestino: e.rotY, estado: e.estado, vis: null };
+      crearEntidad()
+        .then((v) => { o.vis = v; cont.add(v.raiz); })
+        .catch((err) => {
+          console.error('No se pudo cargar la Entidad (¿modelos/Entidad.glb?):', err);
+          const capsula = new THREE.Mesh(
+            new THREE.CapsuleGeometry(0.4, 1.4, 4, 8),
+            new THREE.MeshPhongMaterial({ color: 0x110000, emissive: 0x440000 })
+          );
+          capsula.position.y = 1.1;
+          cont.add(capsula);
+        });
+      return o;
+    }
+
+ // Recibir la posición de la entidad en tiempo real desde el servidor
+    socket.on('entidades', (listaEntidades) => {
+      listaEntidades.forEach((data) => {
+        let o = entidades[data.id];
+        if (!o) {
+          o = nuevaEntidad(data);
+          entidades[data.id] = o;
+        } else {
+          o.destino.set(data.x, 0, data.z);
+          o.rotDestino = data.rotY;
+          o.estado = data.estado;
+        }
+      });
+    });
+
+    socket.on('atrapado', ({ id, x, z }) => {
+      if (id === token) {
+        camera.position.set(x, 1.0, z);
+        if (golpe) {
+          golpe.style.opacity = '1';
+          setTimeout(() => { golpe.style.opacity = '0'; }, 400);
+        }
+      }
+    });
+
+    socket.on('finPartida', ({ modo, ganador }) => {
+      terminada = true;
+      for (const k of ['w', 'a', 's', 'd']) teclas[k] = false;
+      controls.unlock();
+      const gane = modo === 'coop' || ganador === token;
+      document.getElementById('finTitulo').textContent = gane ? 'ESCAPASTE' : 'TE GANARON';
+      document.getElementById('finTexto').textContent = modo === 'coop'
+        ? 'LOS DOS ESCAPARON DEL LABERINTO'
+        : gane ? 'ERES EL PRIMERO EN SALIR' : 'EL OTRO JUGADOR ESCAPÓ PRIMERO';
+      document.getElementById('fin').style.display = 'flex';
+    });
+
+    document.getElementById('finVolver').addEventListener('click', () => {
+      socket.emit('salirSala', null, () => { window.location.href = 'lobby.html'; });
+    });
+
+    function aplicarConfig() {
+      document.getElementById('modoJuego').textContent = config.modo === 'coop' ? 'COOPERATIVO' : '1 VS 1';
+      document.getElementById('objetivoTexto').innerHTML = config.modo === 'coop'
+        ? `REÚNAN ${config.llaves} LLAVES<br>Y ESCAPEN JUNTOS`
+        : `REÚNE ${config.llaves} LLAVES<br>ANTES QUE ÉL`;
+
+      // Dificultad difícil: niebla en todo el mapa
+     if (config.niebla) {
+        scene.background = new THREE.Color(tema.niebla);
+        scene.fog = new THREE.FogExp2(tema.niebla, config.niebla.densidad);
+      }
+    }
+
+    socket.on('jugadorNuevo', crearOtro);
+    socket.on('estado', (d) => {
+      if (!otros[d.id]) crearOtro(d);
+      otros[d.id].destino.set(d.x, 0.6, d.z);
+      otros[d.id].rotDestino = d.rotY;
+      otros[d.id].anim = d.anim;   // la animación llega ya decidida, no se adivina
+    });
+    socket.on('jugadorSalio', (id) => {
+      if (!otros[id]) return;
+      scene.remove(otros[id].mesh);
+      delete otros[id];
+    });
+
+    // Enviar mi posición 20 veces por segundo, solo si cambió
+    // Se manda EXACTAMENTE lo que tú ves de tu personaje: posición, hacia dónde mira el cuerpo
+    // y qué animación tiene (Idle/Walk). Así todos ven lo mismo.
+    let miAnim = 'Idle';          // lo actualiza animate()
+    let ultimo = { x: 0, z: 0, rotY: 0, anim: '' };
+    const dirTmp = new THREE.Vector3();
+    setInterval(() => {
+      const x = camera.position.x, z = camera.position.z;
+      let rotY;
+      if (personaje) {
+        // Ajustamos con Math.PI para alinear el frente del modelo GLB con la vista
+        rotY = personaje.raiz.rotation.y + Math.PI; 
+      } else {
+        camera.getWorldDirection(dirTmp);
+        rotY = Math.atan2(dirTmp.x, dirTmp.z);
+      }
+      const anim = miAnim;
+      if (anim === ultimo.anim && Math.abs(x - ultimo.x) + Math.abs(z - ultimo.z) + Math.abs(rotY - ultimo.rotY) < 0.001) return;
+      ultimo = { x, z, rotY, anim };
+      socket.emit('mover', { x, z, rotY, anim });
+    }, 50);
+
+    function mover(dt) {
+      // hacia dónde mira la cámara, pero aplanado al suelo
+      camera.getWorldDirection(adelante);
+      adelante.y = 0;
+      adelante.normalize();
+      // "derecha" = adelante girado 90°
+      const derX = -adelante.z, derZ = adelante.x;
+
+      let ax = 0, az = 0;   // cuánto avanzar (adelante/atrás) y de lado
+      if (teclas['w']) ax += 1;
+      if (teclas['s']) ax -= 1;
+      if (teclas['d']) az += 1;
+      if (teclas['a']) az -= 1;
+      if (ax === 0 && az === 0) return null;
+
+      const paso = VELOCIDAD * dt;
+      const dx = (adelante.x * ax + derX * az) * paso;
+      const dz = (adelante.z * ax + derZ * az) * paso;
+
+      // Cada eje por separado: así "resbalas" por las paredes en vez de quedarte pegado
+      if (!chocaConPared(camera.position.x + dx, camera.position.z)) camera.position.x += dx;
+      if (!chocaConPared(camera.position.x, camera.position.z + dz)) camera.position.z += dz;
+
+      const largo = Math.hypot(dx, dz);
+      return { x: dx / largo, z: dz / largo };   // hacia dónde caminó (en el mundo)
+    }
+
+    // ───── Personaje 3D y vista tercera persona) ─────
+    const DIST_CAMARA_3P = 3.2;      // qué tan atrás se pone la cámara en tercera persona
+    const ALTURA_PIVOTE_3P = 1.55;   // altura del punto al que mira la cámara (cabeza/pecho)
+
+    let vistaTercera = false;
+    let personaje = null;
+    const estadoModelo = document.getElementById('estadoModelo');
+    estadoModelo.textContent = 'Conectando…';
+
+    // Se llama cuando el servidor responde con el personaje que tocó
+    function cargarMiPersonaje(nombre) {
+      const ruta = rutaModelo(nombre);
+      estadoModelo.textContent = 'Cargando ' + nombre + '…';
+      cargarPersonaje(ruta)
+        .then((p) => {
+          personaje = p;
+          personaje.raiz.visible = false;      // en primera persona no se ve el cuerpo
+          scene.add(personaje.raiz);
+          estadoModelo.textContent = 'Tu personaje: ' + nombre;
+        })
+        .catch((err) => {
+          console.error('No se pudo cargar el personaje:', err);
+          estadoModelo.textContent = 'No se encontró ' + ruta + ' (revisa la carpeta modelos/)';
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'v') vistaTercera = !vistaTercera;
+    });
+
+    // Pone al personaje donde está el jugador y lo anima (Idle si está quieto, Walk si camina)
+    function actualizarPersonaje(dt, mov) {
+      if (!personaje) return;
+      personaje.raiz.position.set(camera.position.x, 0, camera.position.z);
+      if (mov) personaje.girarHacia(Math.atan2(mov.x, mov.z), dt);
+      personaje.setEstado(mov ? 'Walk' : 'Idle');
+      personaje.mixer.update(dt);
+    }
+
+    // En tercera persona la cámara se aleja hacia atrás desde la cabeza, pero se detiene si choca
+    // con una pared o con el techo. La posición REAL del jugador (camera.position) no se toca:
+    // se mueve la cámara solo para dibujar y se devuelve a su lugar justo después (ver animate).
+    const dirCam = new THREE.Vector3();
+    const posJugador = new THREE.Vector3();
+    function colocarCamara3P() {
+      camera.getWorldDirection(dirCam);
+      let mejor = 0;
+      for (let d = 0.15; d <= DIST_CAMARA_3P; d += 0.15) {
+        const x = posJugador.x - dirCam.x * d;
+        const y = ALTURA_PIVOTE_3P - dirCam.y * d;
+        const z = posJugador.z - dirCam.z * d;
+        if (y > ALTO - 0.15 || y < 0.15 || chocaConPared(x, z)) break;
+        mejor = d;
+      }
+      camera.position.set(
+        posJugador.x - dirCam.x * mejor,
+        ALTURA_PIVOTE_3P - dirCam.y * mejor,
+        posJugador.z - dirCam.z * mejor
+      );
+      // Si la cámara quedó pegada a la cabeza, se oculta el cuerpo para no ver "por dentro"
+      if (personaje) personaje.raiz.visible = mejor > 0.8;
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    renderer.setAnimationLoop(animate);
+
+      function animate() {
+      const dt = Math.min(reloj.getDelta(), 0.05);
+      let mov = null;
+      if (controls.isLocked && !terminada) {
+        mov = mover(dt);
+      }
+      miAnim = mov ? 'Walk' : 'Idle';
+      pl.position.copy(camera.position);   // la luz sigue al jugador
+      actualizarPersonaje(dt, mov);
+
+      for (const o of Object.values(otros)) {
+        const k = 1 - Math.exp(-dt * 20);
+        o.mesh.position.lerp(o.destino, k);
+
+        const d = o.rotDestino - o.mesh.rotation.y;
+        o.mesh.rotation.y += Math.atan2(Math.sin(d), Math.cos(d)) * k;
+
+        if (o.modelo) {
+          o.modelo.setEstado(o.anim);
+          o.modelo.mixer.update(dt);
+        }
+      }
+
+      // Llaves de ambos colores: giran y flotan; solo recoges la tuya
+      const t = performance.now() / 1000;
+      llavesMundo.forEach((l) => {
+        if (!l.raiz.visible) return;
+        l.llave.rotation.y += dt * 2;
+        l.llave.position.y = 1.1 + Math.sin(t * 2.5) * 0.08;
+        if (l.color !== miColor || l.enProceso) return;
+        if (Math.hypot(camera.position.x - l.x, camera.position.z - l.z) < 1.0) {
+          l.enProceso = true;
+          socket.emit('recogerLlave', l.id);
+          setTimeout(() => { l.enProceso = false; }, 500);
+        }
+      });
+
+      // Rejas que se abren: suben hasta el techo
+      puertasMundo.forEach((p) => {
+        if (!p.subiendo) return;
+        p.grupo.position.y += dt * 4;
+        if (p.grupo.position.y > ALTO) { p.grupo.visible = false; p.subiendo = false; }
+      });
+
+      // Abrir la reja que te toca (solo si ya tienes la llave)
+      if (tengoLlave) {
+        puertasMundo.forEach((p) => {
+          if (p.abierta || !p.propia || p.orden !== miOrdenActual || p.enProceso) return;
+          if (Math.hypot(camera.position.x - p.x, camera.position.z - p.z) < 1.3) {
+            p.enProceso = true;
+            socket.emit('intentarAbrirPuerta', p.id);
+            setTimeout(() => { p.enProceso = false; }, 500);
+          }
+        });
+      }
+
+      // La Entidad: se mueve suave hacia lo que dice el servidor
+      for (const o of Object.values(entidades)) {
+        const k = 1 - Math.exp(-dt * 12);
+        o.cont.position.lerp(o.destino, k);
+        const d = o.rotDestino - o.cont.rotation.y;
+        o.cont.rotation.y += Math.atan2(Math.sin(d), Math.cos(d)) * k;
+        if (o.vis) {
+          o.vis.setEstado(o.estado === 'persecucion' ? 'Run' : o.estado === 'buscar' ? 'Idle' : 'Walk');
+          o.vis.mixer.update(dt);
+        }
+      }
+
+      if (vistaTercera) {
+        posJugador.copy(camera.position);
+        colocarCamara3P();
+        renderer.render(scene, camera);
+        camera.position.copy(posJugador);
+      } else {
+        if (personaje) personaje.raiz.visible = false;
+        renderer.render(scene, camera);
+      }
+    }
+
+  </script>
+</body>
+
+</html>
