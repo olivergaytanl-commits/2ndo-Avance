@@ -65,7 +65,7 @@ html,body{
 
 /* --- Acá tan las cosas del menú --- */
 .panel{
-  position:absolute; bottom:17%; left:50%; transform:translateX(-50%);
+  position:absolute; bottom:10%; left:50%; transform:translateX(-50%);
   z-index:12;
   gap:0;
   width: min(320px, 70vw);
