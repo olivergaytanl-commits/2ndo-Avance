@@ -1,9 +1,14 @@
-const pista = document.body.dataset.musica || 'menu';
-
 const pistas = {
     menu: 'audio/handprints.mp3',
-    mapa: 'audio/mapa.mp3'
+    oficinas: 'audio/nivel0.mp3',
+    poolrooms: 'audio/poolrooms.mp3',
+    fiesta: 'audio/funrooms.mp3'
 };
+
+// let (no const) porque ahora puede cambiar al entrar a un mapa
+let pista = document.body.dataset.musica in pistas
+    ? document.body.dataset.musica
+    : 'menu';
 
 const musica = new Audio(pistas[pista]);
 musica.loop = true;
@@ -18,14 +23,14 @@ if (sessionStorage.getItem('pista') === pista) {
     sessionStorage.setItem('tiempo', 0);
 }
 
-// asignacion de tiempo solo si el audio ya empezo
+// asignacion de tiempo solo cuando el audio ya cargó
 musica.addEventListener('loadedmetadata', () => {
     if (tiempoGuardado > 0 && tiempoGuardado < musica.duration) {
         musica.currentTime = tiempoGuardado;
     }
 });
 
-// guardar solo mientras se reproduce
+// guardar el tiempo de la pista actual
 function guardarTiempo() {
     if (musica.currentTime > 0) {
         sessionStorage.setItem('pista', pista);
@@ -48,3 +53,23 @@ function iniciar() {
 iniciar();
 document.addEventListener('click', iniciar);
 document.addEventListener('keydown', iniciar);
+
+// --- Cambiar de pista desde otro script (por ejemplo, al cargar un mapa) ---
+function cambiarMusica(nombre) {
+    if (!(nombre in pistas)) return;   // clave inválida: no hace nada
+    if (nombre === pista) return;      // ya está sonando esa
+
+    pista = nombre;
+    tiempoGuardado = 0;                // evita que loadedmetadata retome un tiempo viejo
+
+    musica.pause();
+    musica.src = pistas[nombre];
+    musica.currentTime = 0;
+    musica.play().catch(() => {});
+
+    sessionStorage.setItem('pista', nombre);
+    sessionStorage.setItem('tiempo', 0);
+}
+
+// por si tus scripts son type="module"
+window.cambiarMusica = cambiarMusica;

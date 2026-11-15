@@ -49,6 +49,9 @@
 </head>
 
 <body>
+
+  <script src="audio.js"></script>
+
   <div id="inicio">
     <div class="logo">ONE WAY OUT</div>
     <div>HAZ CLIC PARA COMENZAR</div>
@@ -454,6 +457,9 @@ const texturaTecho = (t, w, h) =>
   t === 'poolrooms' ? techoTema(w, h, { base: '#e9f4f3', sombra: '40,90,95', tubo: '#ffffff', sep: 6 })
   : t === 'fiesta'  ? techoTema(w, h, { base: '#f7e4f1', sombra: '110,50,100', tubo: '#fff3b8', sep: 6, confeti: true })
   : crearTexturaTechoOficinas(w, h);
+
+  // ───── Música según el mapa ─────
+    cambiarMusica(TEMA);
 
     // ───── Paredes delgadas ─────
     const GROSOR = 0.4;   // grosor de las paredes
