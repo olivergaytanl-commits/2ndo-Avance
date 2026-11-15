@@ -1,3 +1,19 @@
+const AJUSTES_DEFAULT = { musica: 70, efectos: 85 };
+
+function leerAjustes() {
+    try {
+        return { ...AJUSTES_DEFAULT, ...JSON.parse(localStorage.getItem('ajustes')) };
+    } catch {
+        return { ...AJUSTES_DEFAULT };
+    }
+}
+
+function guardarAjustes(a) {
+    localStorage.setItem('ajustes', JSON.stringify(a));
+}
+
+const ajustes = leerAjustes();
+
 const pistas = {
     menu: 'audio/handprints.mp3',
     oficinas: 'audio/nivel0.mp3',
@@ -12,7 +28,8 @@ let pista = document.body.dataset.musica in pistas
 
 const musica = new Audio(pistas[pista]);
 musica.loop = true;
-musica.volume = 0.4;
+// antes: musica.volume = 0.4;
+musica.volume = ajustes.musica / 100;
 
 // si es la misma cancion se sigue reproduciendo y si no vuelve a empezar
 let tiempoGuardado = 0;
