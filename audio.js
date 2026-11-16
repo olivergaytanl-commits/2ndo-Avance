@@ -88,5 +88,12 @@ function cambiarMusica(nombre) {
     sessionStorage.setItem('tiempo', 0);
 }
 
+function reproducirEfecto(ruta) {
+    const s = new Audio(ruta);
+    s.volume = leerAjustes().efectos / 100;
+    s.play().catch(() => {});
+}
+window.reproducirEfecto = reproducirEfecto;
+
 // por si tus scripts son type="module"
 window.cambiarMusica = cambiarMusica;

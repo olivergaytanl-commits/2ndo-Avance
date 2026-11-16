@@ -34,6 +34,10 @@
     #hudJuego .relleno { position:absolute; inset:1px; width:58%; background:var(--fluoro-dim); }
     #hudJuego .reticula { position:absolute; top:50%; left:50%; width:4px; height:4px; background:rgba(246,241,207,.8); border-radius:50%; transform:translate(-50%,-50%); }
     #hudJuego .peligro { position:absolute; bottom:60px; right:26px; text-align:right; color:#e0663f; font-size:12px; letter-spacing:.1em; }
+    #efectos { position: fixed; bottom: 24px; left: 24px; display: flex; gap: 10px; z-index: 20; }
+    .efecto { width: 70px; padding: 6px; text-align: center; font: 10px 'IBM Plex Mono', monospace;
+              color: #f6f1cf; background: rgba(20,18,11,0.7); border: 2px solid #6e6438; }
+    .efecto .barra { height: 4px; margin-top: 4px; background: #5c8a52; transform-origin: left; }
   </style>
   <div id="golpe" style="position:fixed; inset:0; z-index:30; pointer-events:none; background:rgba(120,0,0,.65); opacity:0;"></div>
   <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
@@ -79,6 +83,7 @@
   <div id="finTexto" style="font-size:13px; letter-spacing:.08em;"></div>
   <button id="finVolver" style="all:unset; cursor:pointer; padding:12px 28px; border:2px solid #6e6438; color:#5c8a52; font-family:'Oswald',sans-serif; letter-spacing:.14em; font-size:16px;">VOLVER AL LOBBY</button>
 </div>
+<div id="efectos"></div>
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
@@ -663,6 +668,34 @@ const texturaTecho = (t, w, h) =>
       return { raiz, llave };
     }
 
+    //crear Items
+    const COLOR_ITEM = { velocidad: 0xffd23f, invisibilidad: 0x7fd6ff, escudo: 0x5c8a52 };
+    const meshItems = {};
+
+    function crearMeshItem(it) {
+      const hex = COLOR_ITEM[it.tipo];
+      const mesh = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.3),
+        new THREE.MeshPhongMaterial({ color: hex, emissive: hex, emissiveIntensity: 0.6, shininess: 80 })
+      );
+      mesh.position.set(it.x, 1, it.z);
+      mesh.visible = it.activo;
+      scene.add(mesh);
+      meshItems[it.id] = mesh;
+    }
+
+    // giran y flotan
+    function animarItems() {
+      const t = Date.now();
+      for (const m of Object.values(meshItems)) {
+        m.rotation.y += 0.02;
+        m.position.y = 1 + Math.sin(t / 400) * 0.1;
+      }
+    }
+
+    socket.on('itemRecogido', ({ id }) => { if (meshItems[id]) meshItems[id].visible = false; });
+    //socket.on('itemReaparece', (id) => { if (meshItems[id]) meshItems[id].visible = true; });
+
     // Reja: barras verticales, travesaños del color del dueño y un candado
     function crearReja(p) {
       const largoPuerta = Math.max(p.ancho, p.largo);
@@ -694,7 +727,7 @@ const texturaTecho = (t, w, h) =>
       return g;
     }
 
-      function arrancarPartida({ id, personaje: miPersonaje, jugadores, config: cfg, llaves, puertas, miColor: color }) {
+      function arrancarPartida({ id, personaje: miPersonaje, jugadores, config: cfg, llaves, puertas,items, miColor: color }) {
       config = cfg;
       miColor = color;
       aplicarConfig();
@@ -724,6 +757,7 @@ const texturaTecho = (t, w, h) =>
         });
       });
 
+      (items || []).forEach(crearMeshItem);
       refrescarLlaves();
       actualizarObjetivo();
       for (const j of Object.values(jugadores)) if (j.id !== id) crearOtro(j);
@@ -890,7 +924,8 @@ const texturaTecho = (t, w, h) =>
       if (teclas['a']) az -= 1;
       if (ax === 0 && az === 0) return null;
 
-      const paso = VELOCIDAD * dt;
+      //const paso = VELOCIDAD * dt;
+      const paso = VELOCIDAD * multVel * dt;
       const dx = (adelante.x * ax + derX * az) * paso;
       const dz = (adelante.z * ax + derZ * az) * paso;
 
@@ -965,6 +1000,61 @@ const texturaTecho = (t, w, h) =>
       if (personaje) personaje.raiz.visible = mejor > 0.8;
     }
 
+    let multVel = 1;   // velocidad normal o aumentada por efecto de velocidad
+    const efectosActivos = {};   // tipo -> { el, fin, total }
+    const NOMBRE_EFECTO = { velocidad: 'VELOCIDAD', invisibilidad: 'INVISIBLE', escudo: 'ESCUDO' };
+
+    function quitarEfecto(tipo) {
+      efectosActivos[tipo]?.el.remove();
+      delete efectosActivos[tipo];
+    }
+
+    socket.on('efecto', ({ jugador, tipo, ms }) => {
+      if (jugador !== token) {
+        // Otro jugador: si es invisible, se oculta su modelo
+        if (tipo === 'invisibilidad' && otros[jugador]) otros[jugador].mesh.visible = false;
+        return;
+      }
+      if (!efectosActivos[tipo]) {
+        const el = document.createElement('div');
+        el.className = 'efecto';
+        el.innerHTML = `${NOMBRE_EFECTO[tipo]}<div class="barra"></div>`;
+        document.getElementById('efectos').appendChild(el);
+        efectosActivos[tipo] = { el };
+      }
+      efectosActivos[tipo].total = ms;                     // escudo: 0 = sin tiempo
+      efectosActivos[tipo].fin = performance.now() + ms;
+      if (tipo === 'velocidad') multVel = 1.6;
+    });
+
+    socket.on('efectoTermina', ({ jugador, tipo }) => {
+      if (jugador !== token) {
+        if (tipo === 'invisibilidad' && otros[jugador]) otros[jugador].mesh.visible = true;
+        return;
+      }
+      quitarEfecto(tipo);
+      if (tipo === 'velocidad') multVel = 1;
+    });
+
+    socket.on('escudoRoto', (id) => { if (id === token) quitarEfecto('escudo'); });
+
+    socket.on('itemReaparece', ({ id, x, z }) => {
+      const m = meshItems[id];
+      if (!m) return;
+      m.position.x = x;
+      m.position.z = z;
+      m.visible = true;
+    });
+
+    // actualiza las barras
+    function actualizarHudEfectos() {
+      for (const [tipo, e] of Object.entries(efectosActivos)) {
+        if (!e.total) continue;
+        const resta = Math.max(0, e.fin - performance.now());
+        e.el.querySelector('.barra').style.transform = `scaleX(${resta / e.total})`;
+      }
+    }
+
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -1028,6 +1118,9 @@ const texturaTecho = (t, w, h) =>
           }
         });
       }
+
+      animarItems();
+      actualizarHudEfectos();
 
       // La Entidad: se mueve suave hacia lo que dice el servidor
       for (const o of Object.values(entidades)) {

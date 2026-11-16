@@ -143,9 +143,55 @@ function crearRutas(m) {
   return { azul: ruta(salidaA, [0.30, 0.62]), rojo: ruta(salidaB, [0.34, 0.66]) };
 }
 
+function crearItems(matriz, semilla, rutas) {
+  const R = rng(semilla + 999);
+  const H = matriz.length, W = matriz[0].length;
+
+  const ocupadas = new Set(['1,1']);
+  for (const color of ['azul', 'rojo']) {
+    rutas[color].llaves.forEach(p => ocupadas.add(`${p.z / TAM},${p.x / TAM}`));
+    rutas[color].puertas.forEach(p => ocupadas.add(`${p.z / TAM},${p.x / TAM}`));
+  }
+
+  const libres = [];
+  for (let f = 1; f < H; f += 2)
+    for (let c = 1; c < W; c += 2)
+      if (matriz[f][c] === 0 && !ocupadas.has(`${f},${c}`)) libres.push([f, c]);
+
+  for (let i = libres.length - 1; i > 0; i--) {
+    const j = Math.floor(R() * (i + 1));
+    [libres[i], libres[j]] = [libres[j], libres[i]];
+  }
+
+  const items = [];
+  let n = 0;
+  for (const tipo of ['velocidad', 'invisibilidad', 'escudo']) {
+    for (let k = 0; k < 2; k++) {
+      const [f, c] = libres[n];
+      items.push({ id: n++, tipo, x: c * TAM, z: f * TAM, activo: true, reaparece: 0 });
+    }
+  }
+  return items;
+}
+
+function celdasParaItems(matriz, rutas) {
+  const H = matriz.length, W = matriz[0].length;
+  const ocupadas = new Set(['1,1']);
+  for (const color of ['azul', 'rojo']) {
+    rutas[color].llaves.forEach(p => ocupadas.add(`${p.z / TAM},${p.x / TAM}`));
+    rutas[color].puertas.forEach(p => ocupadas.add(`${p.z / TAM},${p.x / TAM}`));
+  }
+  const libres = [];
+  for (let f = 1; f < H; f += 2)
+    for (let c = 1; c < W; c += 2)
+      if (matriz[f][c] === 0 && !ocupadas.has(`${f},${c}`)) libres.push([f, c]);
+  return libres;
+}
+
 function crearMapa(nombre, tema, cw, ch, semilla) {
   const matriz = generar(cw, ch, semilla);
-  return { nombre, tema, matriz, inicio: { fila: 1, col: 1 }, rutas: crearRutas(matriz) };
+  const rutas = crearRutas(matriz);
+  return { nombre, tema, matriz, inicio: { fila: 1, col: 1 }, rutas, celdasItems: celdasParaItems(matriz, rutas) };
 }
 
 module.exports = {

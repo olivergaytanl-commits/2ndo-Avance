@@ -25,6 +25,29 @@ const MODOS = {
   coop: { llaves: 3, entidades: 2 },// cooperativo
 };
 
+const TIPOS_ITEM = {
+  velocidad:     { duracion: 8000, respawn: 30000 },  // ms
+  invisibilidad: { duracion: 6000, respawn: 45000 },
+  escudo:        { duracion: 0,    respawn: 40000 },  // un solo uso
+};
+
+function repartirItems(mapa) {
+  const libres = mapa.celdasItems.slice();
+  for (let i = libres.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [libres[i], libres[j]] = [libres[j], libres[i]];
+  }
+  const items = [];
+  let n = 0;
+  for (const tipo of Object.keys(TIPOS_ITEM)) {
+    for (let k = 0; k < 2; k++) {
+      const [f, c] = libres[n];
+      items.push({ id: n++, tipo, x: c * TAM, z: f * TAM, activo: true, reaparece: 0 });
+    }
+  }
+  return items;
+}
+
 const DIFICULTADES = {
   normal: {
     entidad: { velocidad: 2.5, rangoVision: 8, anguloVision: 70 },
@@ -200,6 +223,19 @@ io.on('connection', (socket) => {
     s.puertas = [];
     s.progresoCoop = 1;
 
+    for (const t of s.jugadores) {
+      Object.assign(jugadores[t], {
+        x: 2, z: 2, rotY: 0, anim: 'Idle',
+        llavesRecogidas: 0,
+        progresoOrden: 1,
+        listo: false, inmuneHasta: 0,
+        efectos: {},                       // ← nuevo
+      });
+    }
+    // s.items = MAPAS[s.mapa].items.map((i) => ({ ...i })); 
+
+    s.items = repartirItems(MAPAS[s.mapa]);
+
     // Llaves y puertas salen del mapa elegido (mapas.js), así siempre caen en pasillos válidos
     const rutas = MAPAS[s.mapa].rutas;
     const armar = (ruta, color, desfase) => {
@@ -225,6 +261,7 @@ io.on('connection', (socket) => {
     s.entidades = crearEntidades(s.mapa, MAPAS[s.mapa], MODOS[s.modo].entidades);
     io.to(s.codigo).emit('partidaIniciada');
     cb({});
+
   });
 
     socket.on('recogerLlave', (llaveId) => {
@@ -287,11 +324,12 @@ io.on('connection', (socket) => {
       config: configDe(s),
       llaves: s.llaves,
       puertas: s.puertas,
+      items: s.items,  //nuevooo
       miColor: colorDe(s, token),
       miOrden: ordenDe(s, j),
       jugadores: Object.fromEntries(s.jugadores.map((t) => [t, publicoJugador(jugadores[t])])),
     });
-    
+
     // Notificar a los demás que este jugador ya entró al juego activo
     socket.to(s.codigo).emit('jugadorNuevo', publicoJugador(j));
   });
@@ -339,7 +377,16 @@ setInterval(() => {
     const activos = s.jugadores.map((t) => jugadores[t]).filter((j) => j && j.listo);
     if (!activos.length) continue;
 
+    //Items(s, activos);
+    try { actualizarItems(s, activos); } catch (e) { console.error('items:', e.message); }
+
     actualizarEntidades(s.mapa, mapa, s.entidades, dt, activos, DIFICULTADES[s.dificultad].entidad, (j) => {
+      if (j.efectos?.escudo) {             // ← nuevo: el escudo absorbe el golpe
+        delete j.efectos.escudo;
+        j.inmuneHasta = Date.now() + 1500;
+        io.to(s.codigo).emit('escudoRoto', j.id);
+        return;
+      }
       j.x = mapa.inicio.col * TAM;     // te devuelve al inicio, con 4 s de inmunidad
       j.z = mapa.inicio.fila * TAM;
       j.inmuneHasta = Date.now() + 4000;
@@ -348,6 +395,60 @@ setInterval(() => {
     io.to(s.codigo).volatile.emit('entidades', s.entidades.map(publica));
   }
 }, 50);
+
+// ───── Items ─────
+function actualizarItems(s, activos) {
+  const ahora = Date.now();
+
+  for (const item of s.items) {
+    // Reaparición (en otro lugar)
+    if (!item.activo && ahora >= item.reaparece) {
+      const ocupadas = new Set(s.items.filter(i => i.activo).map(i => `${i.x},${i.z}`));
+      const opciones = MAPAS[s.mapa].celdasItems
+        .filter(([f, c]) => !ocupadas.has(`${c * TAM},${f * TAM}`));
+      if (opciones.length) {
+        const [f, c] = opciones[Math.floor(Math.random() * opciones.length)];
+        item.x = c * TAM;
+        item.z = f * TAM;
+      }
+      item.activo = true;
+      io.to(s.codigo).emit('itemReaparece', { id: item.id, x: item.x, z: item.z });
+    }
+    if (!item.activo) continue;
+
+    // Recogida por distancia
+    for (const j of activos) {
+      if (Math.hypot(j.x - item.x, j.z - item.z) > 0.8) continue;
+
+      const def = TIPOS_ITEM[item.tipo];
+      j.efectos = j.efectos || {};
+      if (item.tipo === 'escudo') {
+        if (j.efectos.escudo) continue;               // ya tiene uno
+        j.efectos.escudo = true;
+      } else {
+        j.efectos[item.tipo] = ahora + def.duracion;  // renueva si ya lo tenía
+      }
+
+      item.activo = false;
+      item.reaparece = ahora + def.respawn;
+      io.to(s.codigo).emit('itemRecogido', { id: item.id });
+      io.to(s.codigo).emit('efecto', { jugador: j.id, tipo: item.tipo, ms: def.duracion });
+      break;
+    }
+  }
+
+  // Expiración de efectos con tiempo
+  for (const j of activos) {
+    if (!j.efectos) continue;
+    for (const tipo of ['velocidad', 'invisibilidad']) {
+      if (j.efectos[tipo] && ahora >= j.efectos[tipo]) {
+        delete j.efectos[tipo];
+        io.to(s.codigo).emit('efectoTermina', { jugador: j.id, tipo });
+      }
+    }
+  }
+}
+
 
 
 server.listen(3000, () => console.log('server running at http://localhost:3000'));

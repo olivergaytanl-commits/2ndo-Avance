@@ -139,6 +139,7 @@ function actualizarUna(e, dt, nav, cfg, jugadores, ahora, alCapturar) {
   let visto = null, mejor = Infinity;
   for (const j of jugadores) {
     if (j.inmuneHasta > ahora) continue;
+    if (j.efectos?.invisibilidad) continue;
     const dx = j.x - e.x, dz = j.z - e.z, d = Math.hypot(dx, dz);
     if (d > cfg.rangoVision * (persiguiendo ? 1.2 : 1)) continue;
     if (!persiguiendo && d > RADIO_SENTIDO) {   // persiguiendo te ve en 360°; si no, solo dentro de su cono
@@ -147,6 +148,7 @@ function actualizarUna(e, dt, nav, cfg, jugadores, ahora, alCapturar) {
     }
     if (!nav.lineaLibre(e.x, e.z, j.x, j.z)) continue;
     if (d < mejor) { mejor = d; visto = j; }
+
   }
 
   // ── 2. Atrapar ──
