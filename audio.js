@@ -88,6 +88,25 @@ function cambiarMusica(nombre) {
     sessionStorage.setItem('tiempo', 0);
 }
 
+const SONIDOS = {
+    llaves:         'audio/llaves.mp3',
+    velocidad:     'audio/velocidad.mp3',
+    invisibilidad: 'audio/invisibilidad.mp3',
+    escudo:        'audio/escudo.mp3',
+    escudoRoto:    'audio/escudoroto.mp3'
+};
+
+// precarga para no tener retraso
+Object.values(SONIDOS).forEach((ruta) => {
+    const a = new Audio(ruta);
+    a.preload = 'auto';
+});
+
+function sonido(nombre) {
+    if (SONIDOS[nombre]) reproducirEfecto(SONIDOS[nombre]);
+}
+window.sonido = sonido;
+
 function reproducirEfecto(ruta) {
     const s = new Audio(ruta);
     s.volume = leerAjustes().efectos / 100;

@@ -775,10 +775,11 @@ const texturaTecho = (t, w, h) =>
         : `BUSCA LA LLAVE ${n}/3`;
     }
 
-     socket.on('llaveRecogida', ({ id, color }) => {
+     socket.on('llaveRecogida', ({ id,jugadorId, color }) => {
       const l = llavesMundo.find((k) => k.id === id);
       if (l) l.recogida = true;
       if (color === miColor) tengoLlave = true;
+      if (jugadorId === token) sonido('llaves');
       refrescarLlaves();
       actualizarObjetivo();
     });
@@ -1015,6 +1016,9 @@ const texturaTecho = (t, w, h) =>
         if (tipo === 'invisibilidad' && otros[jugador]) otros[jugador].mesh.visible = false;
         return;
       }
+
+      sonido(tipo);   
+
       if (!efectosActivos[tipo]) {
         const el = document.createElement('div');
         el.className = 'efecto';
@@ -1036,7 +1040,13 @@ const texturaTecho = (t, w, h) =>
       if (tipo === 'velocidad') multVel = 1;
     });
 
-    socket.on('escudoRoto', (id) => { if (id === token) quitarEfecto('escudo'); });
+    //socket.on('escudoRoto', (id) => { if (id === token) quitarEfecto('escudo'); });
+
+    socket.on('escudoRoto', (id) => {
+      if (id !== token) return;
+      quitarEfecto('escudo');
+      sonido('escudoRoto');
+    });
 
     socket.on('itemReaparece', ({ id, x, z }) => {
       const m = meshItems[id];
