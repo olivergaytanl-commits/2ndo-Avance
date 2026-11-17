@@ -3,6 +3,7 @@ const { createServer } = require('node:http');
 const { join } = require('node:path');
 const { Server } = require('socket.io');
 const MAPAS = require('./mapas');
+const { guardarScore, obtenerScores, asegurar: iniciarBD } = require('./db');
 const { crearEntidades, actualizarEntidades, publica } = require('./entidad-ia');
 const TAM = 2;   // igual que en el cliente
 
@@ -13,7 +14,7 @@ const io = new Server(server);
 app.use(express.static(__dirname, { index: false }));
 app.use('/js', express.static(join(__dirname, 'js')));
 app.use('/modelos', express.static(join(__dirname, 'modelos')));
-app.get('/', (req, res) => res.sendFile(join(__dirname, 'index.html')));
+app.get('/', (req, res) => res.sendFile(join(__dirname, 'login.html')));   // la entrada es el inicio de sesión
 
 // ───── Configuración de juego ─────
 const PERSONAJES = ['Bryce1', 'Martha1'];
@@ -68,6 +69,18 @@ const jugadores = {};  // token  -> jugador
 
 const ack = (cb) => (typeof cb === 'function' ? cb : () => {});
 
+// Los nombres vienen del cliente: se limpian aquí también (sin < > & comillas, máx. 20)
+const limpiarNombre = (n) =>
+  String(n || '').replace(/[<>&"'`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20);
+
+const ETIQUETA_DIFICULTAD = { normal: 'NORMAL', dificil: 'DIFÍCIL' };
+
+// Ranking (tabla "score" de la base de datos gcw)
+app.get('/api/scores', async (req, res) => {
+  try { res.json(await obtenerScores()); }
+  catch (e) { console.error('scores:', e.message); res.status(500).json({ error: 'No se pudo leer el ranking' }); }
+});
+
 // El cliente pide aquí la matriz del mapa de SU sala
 app.get('/api/mapa', (req, res) => {
   const j = jugadores[req.query.token];
@@ -118,7 +131,7 @@ function publicoSala(s) {
     estado: s.estado,
     anfitrion: s.anfitrion,
     max: MAX_JUGADORES,
-    jugadores: s.jugadores.map((t) => ({ id: t, personaje: jugadores[t].personaje })),
+    jugadores: s.jugadores.map((t) => ({ id: t, personaje: jugadores[t].personaje, nombre: jugadores[t].nombre })),
   };
 }
 
@@ -158,13 +171,21 @@ io.on('connection', (socket) => {
     token = t;
     let j = jugadores[t];
     if (!j) {
-      j = jugadores[t] = { id: t, x: 2, z: 2, rotY: 0, anim: 'Idle', personaje: null, sala: null, socketId: null, timer: null };
+      j = jugadores[t] = { id: t, nombre: null, x: 2, z: 2, rotY: 0, anim: 'Idle', personaje: null, sala: null, socketId: null, timer: null };
     }
     clearTimeout(j.timer);
     j.socketId = socket.id;
     const s = salaDe(t);
     if (s) socket.join(s.codigo);
     cb({ sala: s ? publicoSala(s) : null });
+  });
+
+  socket.on('nombre', (n) => {
+    const j = jugadores[token];
+    if (!j) return;
+    j.nombre = limpiarNombre(n) || null;
+    const s = salaDe(token);
+    if (s) emitirSala(s);
   });
 
   socket.on('crearSala', (cfg, cb) => {
@@ -218,6 +239,8 @@ io.on('connection', (socket) => {
     if (!s || s.anfitrion !== token || s.estado !== 'espera') return cb({ error: 'No puedes iniciar' });
     if (s.jugadores.length < MAX_JUGADORES) return cb({ error: 'Falta un jugador' });
     s.estado = 'jugando';
+    s.inicio = null;                 // el reloj arranca cuando todos pulsan para empezar
+    s.creadaEn = Date.now();
 
     s.llaves = [];
     s.puertas = [];
@@ -301,7 +324,15 @@ io.on('connection', (socket) => {
     // La puerta 3 es la salida
     if (p.orden === 3) {
       s.estado = 'terminada';
-      io.to(s.codigo).emit('finPartida', { modo: s.modo, ganador: s.modo === 'coop' ? null : token });
+      const tiempo = Math.round((Date.now() - (s.inicio || s.creadaEn)) / 1000);
+      // Carrera: gana quien abre la puerta. Coop: gana el equipo completo.
+      const nombre = s.modo === 'coop'
+        ? s.jugadores.map((t) => jugadores[t]?.nombre || 'ANÓNIMO').join(' & ')
+        : (j.nombre || 'ANÓNIMO');
+      io.to(s.codigo).emit('finPartida', { modo: s.modo, ganador: s.modo === 'coop' ? null : token, nombre, tiempo });
+      guardarScore({ nombre, tiempo, dificultad: ETIQUETA_DIFICULTAD[s.dificultad] || s.dificultad })
+        .then(() => io.to(s.codigo).emit('scoreGuardado'))
+        .catch((e) => console.error('No se pudo guardar el score:', e.message));
     }
   });
 
@@ -347,6 +378,10 @@ io.on('connection', (socket) => {
   socket.on('listo', () => {
     const j = jugadores[token];
     if (j) j.listo = true;
+    const s = salaDe(token);
+    if (s && s.estado === 'jugando' && !s.inicio && s.jugadores.every((t) => jugadores[t] && jugadores[t].listo)) {
+      s.inicio = Date.now();
+    }
   });
 
   socket.on('salirSala', (_, cb) => {
@@ -381,7 +416,7 @@ setInterval(() => {
     try { actualizarItems(s, activos); } catch (e) { console.error('items:', e.message); }
 
     actualizarEntidades(s.mapa, mapa, s.entidades, dt, activos, DIFICULTADES[s.dificultad].entidad, (j) => {
-      if (j.efectos?.escudo) {             // ← nuevo: el escudo absorbe el golpe
+      if (j.efectos?.escudo) {             // el escudo absorbe el golpe
         delete j.efectos.escudo;
         j.inmuneHasta = Date.now() + 1500;
         io.to(s.codigo).emit('escudoRoto', j.id);
@@ -451,4 +486,6 @@ function actualizarItems(s, activos) {
 
 
 
-server.listen(3000, () => console.log('server running at http://localhost:3000'));
+iniciarBD().finally(() => {
+  server.listen(3000, () => console.log('server running at http://localhost:3000'));
+});

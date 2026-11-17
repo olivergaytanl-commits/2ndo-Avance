@@ -1,21 +1,41 @@
-const data = [
-  ["001", "SILENT.EXE", "01:42", "0-B"],
-  ["002", "MARIA_K", "01:58", "0-A"],
-  ["003", "ntlg", "02:05", "0-C"],
-  ["004", "wanderer77", "02:11", "0-B"],
-  ["005", "H.RIVERA", "02:19", "0-A"],
-  ["006", "no.exit.found", "02:24", "0-D"],
-  ["007", "diego_r", "02:30", "0-B"],
-  ["008", "flicker", "02:37", "0-A"],
-  ["009", "yellow.static", "02:45", "0-C"],
-  ["010", "L.TORRES", "02:52", "0-B"],
-];
-
+// Ranking real: viene de /api/scores (tabla "score" de la base de datos gcw)
 const rows = document.getElementById('rows');
 
-data.forEach((d, i) => {
+const formatoTiempo = (seg) =>
+  `${String(Math.floor(seg / 60)).padStart(2, '0')}:${String(seg % 60).padStart(2, '0')}`;
+
+function fila(d, i) {
   const el = document.createElement('div');
   el.className = 'score-row' + (i < 3 ? ' top' : '');
-  el.innerHTML = `<span class="rank">${d[0]}</span><span class="name">${d[1]}</span><span class="time">${d[2]}</span><span class="level">NIVEL ${d[3]}</span>`;
-  rows.appendChild(el);
-});
+  const celdas = [
+    ['rank', String(d.ranking).padStart(3, '0')],
+    ['name', d.nombre],               // textContent: el nombre nunca se interpreta como HTML
+    ['time', formatoTiempo(d.tiempo)],
+    ['level', d.dificultad],
+  ];
+  for (const [clase, texto] of celdas) {
+    const span = document.createElement('span');
+    span.className = clase;
+    span.textContent = texto;
+    el.appendChild(span);
+  }
+  return el;
+}
+
+function mensaje(texto) {
+  const el = document.createElement('div');
+  el.className = 'score-row';
+  el.style.gridTemplateColumns = '1fr';
+  el.style.textAlign = 'center';
+  el.textContent = texto;
+  rows.replaceChildren(el);
+}
+
+mensaje('CARGANDO...');
+fetch('/api/scores')
+  .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+  .then((lista) => {
+    if (!lista.length) return mensaje('AÚN NADIE HA ESCAPADO');
+    rows.replaceChildren(...lista.map(fila));
+  })
+  .catch(() => mensaje('NO SE PUDO CARGAR EL RANKING'));

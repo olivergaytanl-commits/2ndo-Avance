@@ -11,4 +11,14 @@ Estructura:
 - servidor.js / js/personaje.js: servidor y lógica del laberinto multijugador.
 
 
-Nota: Las pantallas del primer avance conservan sus enlaces y funciones visuales. El laberinto 3D del segundo avance se conserva como laberinto.html. Algunas pantallas (por ejemplo lobby, récords y opciones) siguen siendo prototipos visuales y no están conectadas a la lógica del juego. ñ
+Nota: Las pantallas del primer avance conservan sus enlaces y funciones visuales. El laberinto 3D del segundo avance se conserva como laberinto.html. Algunas pantallas (por ejemplo lobby, récords y opciones) siguen siendo prototipos visuales y no están conectadas a la lógica del juego.
+
+INICIO DE SESIÓN Y RANKING
+- login.html: pantalla de entrada (nombre o Facebook). El nombre se guarda en la pestaña (sessionStorage).
+- Al ganar, servidor.js guarda nombre, tiempo (segundos) y dificultad en la tabla "score" de la base "gcw".
+  Carrera: se guarda el ganador. Cooperativo: se guardan los dos nombres ("A & B").
+- db.js crea la base y la tabla solas. Config por variables de entorno: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+  (por defecto localhost / 3306 / root / sin contraseña / gcw). Si MySQL está apagado usa scores.json.
+- database.sql: el mismo script de la tabla, por si prefieres correrlo en Workbench.
+- Para correr: npm install  y luego  npm start  -> http://localhost:3000
+- Facebook: en developers.facebook.com agrega "localhost" en Dominios de la app / Orígenes permitidos del SDK de JavaScript.

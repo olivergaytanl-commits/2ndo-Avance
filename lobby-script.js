@@ -1,7 +1,10 @@
+// Sin sesión no se puede entrar a una sala
+const nombreJugador = sessionStorage.getItem('nombreJugador');
+if (!nombreJugador) window.location.replace('login.html');
+
 const socket = io();
 
 // Cada pestaña tiene su propio token: así el servidor reconoce al jugador
-// aunque cambie de página (lobby -> laberinto) y se cree un socket nuevo.
 let token = sessionStorage.getItem('idJugador');
 if (!token) {
   token = Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -9,12 +12,14 @@ if (!token) {
 }
 
 const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const mensaje = (t) => { $('msg').textContent = t || ''; };
 let sala = null;
 
 // ───── Conexión ─────
 socket.on('connect', () => {
   socket.emit('identificar', token, (r) => {
+    socket.emit('nombre', nombreJugador);
     if (!r || !r.sala) return mostrarInicio();
     if (r.sala.estado === 'jugando') window.location.href = 'laberinto.html';
     else mostrarSala(r.sala);
@@ -45,7 +50,7 @@ function mostrarSala(s) {
   // Lista de jugadores con tus clases de siempre
   let html = s.jugadores.map((j) => `
     <div class="player-row${j.id === token ? ' you' : ''}">
-      <span class="name">${j.id === token ? 'TÚ' : 'JUGADOR'} · ${j.personaje}${j.id === s.anfitrion ? ' (ANFITRIÓN)' : ''}</span>
+      <span class="name">${esc(j.nombre || 'JUGADOR')}${j.id === token ? ' (TÚ)' : ''} · ${j.personaje}${j.id === s.anfitrion ? ' (ANFITRIÓN)' : ''}</span>
       <span class="status ready">LISTO</span>
     </div>`).join('');
   for (let i = s.jugadores.length; i < s.max; i++) {

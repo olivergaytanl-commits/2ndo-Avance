@@ -1,0 +1,48 @@
+/* Pantalla de inicio de sesión: reutiliza las variables y el fondo de styles.css */
+.titleblock{ position:relative; z-index:11; text-align:center; }
+.title{ margin-top:5%; font-size: clamp(40px, 7vw, 84px); }
+
+.login-panel{
+  bottom:auto; top:50%; transform:translate(-50%, -8%);
+  width:min(360px, 88vw);
+  padding:22px 22px 18px;
+  display:flex; flex-direction:column; gap:12px;
+}
+.login-panel label{
+  font-size:10px; letter-spacing:.15em; color: var(--fluoro-dim);
+}
+.login-panel input{
+  width:100%; padding:11px 12px; border-radius:0; outline:none;
+  background:rgba(20,18,11,.85); color: var(--fluoro);
+  border:2px solid var(--wall-dark);
+  font:14px 'IBM Plex Mono', monospace; letter-spacing:.08em;
+}
+.login-panel input::placeholder{ color: var(--wall-dark); }
+.login-panel input:focus{ border-color: var(--fluoro-dim); }
+
+.btn-login{
+  all:unset; box-sizing:border-box; text-align:center; cursor:pointer;
+  font-family:'Oswald', sans-serif; font-weight:500; letter-spacing:.14em; font-size:15px;
+  padding:12px 0; color: var(--fluoro-dim);
+  border:2px solid var(--wall-dark); background:rgba(20,18,11,.55);
+  transition: color .15s ease, background .15s ease;
+}
+.btn-login:hover{ color: var(--fluoro); background:rgba(246,241,207,.06); }
+.btn-login:focus-visible{ outline:2px solid var(--fluoro-dim); outline-offset:2px; }
+.btn-login.primary{ color: var(--exit-glow); }
+.btn-login.primary:hover{ color:#7fb872; background:rgba(92,138,82,.12); }
+.btn-login:disabled{ opacity:.4; cursor:not-allowed; }
+
+.separador{
+  text-align:center; font:10px 'IBM Plex Mono', monospace;
+  color: var(--wall-dark); letter-spacing:.3em;
+}
+#msg{
+  min-height:16px; text-align:center;
+  font:11px 'IBM Plex Mono', monospace; letter-spacing:.05em; color:#c97452;
+}
+
+@media (max-height:620px){
+  .title{ margin-top:2%; font-size:40px; }
+  .login-panel{ transform:translate(-50%, -2%); }
+}
